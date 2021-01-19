@@ -9,6 +9,8 @@ edition = "2018"
 [dependencies]
 web-sys = { version = "0.3", features = ["console", "Window"] }
 wasm-bindgen = { version = "0.2", features = ["default", "serde-serialize"] }
+specs = "0.16"
+golem = { version = "0.1", features = ["web-sys"] }
 
 [lib]
 name = "client"
@@ -19,3 +21,7 @@ crate-type = ["cdylib", "rlib"]
 # Tell `rustc` to optimize for small code size.
 opt-level = "s"
 lto = true
+
+[[bin]]
+name = "server"
+path = "src/server.rs"
