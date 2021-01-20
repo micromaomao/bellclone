@@ -25,16 +25,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
-name = "bellclone"
-version = "0.1.0"
-dependencies = [
- "golem",
- "specs",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -137,6 +127,23 @@ name = "either"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
+
+[[package]]
+name = "game_client"
+version = "0.1.0"
+dependencies = [
+ "game_core",
+ "golem",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "game_core"
+version = "0.1.0"
+dependencies = [
+ "specs",
+]
 
 [[package]]
 name = "gl_generator"

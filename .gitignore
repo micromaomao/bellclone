@@ -1,4 +1,4 @@
 /target
-/pkg
+/client/pkg
 node_modules
-/dist
+dist

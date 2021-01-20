@@ -1,27 +1,2 @@
-[package]
-name = "bellclone"
-version = "0.1.0"
-authors = ["mao"]
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-web-sys = { version = "0.3", features = ["console", "Window"] }
-wasm-bindgen = { version = "0.2", features = ["default", "serde-serialize"] }
-specs = "0.16"
-golem = { version = "0.1", features = ["web-sys"] }
-
-[lib]
-name = "client"
-path = "src/client.rs"
-crate-type = ["cdylib", "rlib"]
-
-[profile.release]
-# Tell `rustc` to optimize for small code size.
-opt-level = "s"
-lto = true
-
-[[bin]]
-name = "server"
-path = "src/server.rs"
+[workspace]
+members = ["core", "client"]
