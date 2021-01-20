@@ -1,0 +1,3 @@
+struct Image;
+
+// todo
