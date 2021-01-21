@@ -13,6 +13,7 @@ specs = { version = "0.16", default-features = false, features = ["wasm-bindgen"
 image = { version = "0.23", features = ["png"], default-features = false }
 glam = "0.12"
 console_error_panic_hook = "0.1.6"
+uuid = { version = "0.8", features = ["wasm-bindgen"] }
 
 [lib]
 name = "client"

@@ -11,6 +11,15 @@ pub struct DebugRect {
   pub height: f32,
 }
 
+impl DebugRect {
+  pub fn with_size(size: f32) -> Self {
+    let mut d = Self::default();
+    d.width = size;
+    d.height = size;
+    d
+  }
+}
+
 impl Component for DebugRect {
   type Storage = DenseVecStorage<Self>;
 }

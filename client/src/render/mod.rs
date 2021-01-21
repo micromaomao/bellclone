@@ -8,15 +8,16 @@ use view::affine_2d_to_3d;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlCanvasElement;
 
-mod image_texture;
-mod shader_program;
-mod view;
+pub mod image_texture;
+pub mod shader_program;
+pub mod view;
 
 pub struct GraphicsCtx {
-  glctx: golem::Context,
-  canvas: HtmlCanvasElement,
-  aspect_ratio: RefCell<f32>,
-  shaders: RefCell<Shaders>,
+  pub glctx: golem::Context,
+  pub canvas: HtmlCanvasElement,
+  pub aspect_ratio: RefCell<f32>,
+  pub viewport_size: RefCell<(u32, u32)>,
+  pub shaders: RefCell<Shaders>,
 }
 
 #[derive(Clone)]
@@ -74,6 +75,7 @@ impl GraphicsCtx {
       glctx,
       canvas: ele,
       aspect_ratio: RefCell::new(0f32),
+      viewport_size: RefCell::new((0u32, 0u32)),
       shaders: RefCell::new(shaders),
     })
   }
@@ -83,10 +85,11 @@ impl GraphicsCtx {
     self.canvas.set_width(width);
     self.canvas.set_height(height);
     self.aspect_ratio.replace(width as f32 / height as f32);
+    self.viewport_size.replace((width, height));
     self.glctx.set_viewport(0, 0, width, height);
   }
 
-  pub fn prepare_render(&'static self) -> DrawingCtx {
+  pub fn prepare_render(&'static self, view_matrix: Mat4) -> DrawingCtx {
     let aspect_ratio = *self.aspect_ratio.borrow();
     if aspect_ratio == 0f32 {
       panic!("Size not initalized yet.");
@@ -99,10 +102,9 @@ impl GraphicsCtx {
     glctx.set_clear_color(0f32, 0f32, 0f32, 1f32);
     glctx.clear();
 
-    let view_mat = view::view_matrix(aspect_ratio);
     DrawingCtx {
       glctx,
-      view_mat,
+      view_mat: view_matrix,
       shaders: &self.shaders,
     }
   }

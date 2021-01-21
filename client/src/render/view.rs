@@ -22,11 +22,21 @@ pub fn affine_2d_to_3d(transform: Mat3) -> Mat4 {
   .transpose()
 }
 
-pub fn view_matrix(aspect_ratio: f32) -> Mat4 {
-  let bl = Vec2::new(-8f32, 0f32);
-  let tr = Vec2::new(8f32, 9f32);
+pub fn view_matrix(aspect_ratio: f32, camera_y: f32) -> Mat4 {
+  let mut bl = Vec2::new(-8f32, camera_y);
+  let mut tr = Vec2::new(8f32, camera_y + 9f32);
+  let natural_aspect_ratio = 16f32 / 9f32;
 
-  // todo
+  if aspect_ratio > natural_aspect_ratio {
+    // space around
+    let extra_width = (tr.y - bl.y) * aspect_ratio - (tr.x - bl.x);
+    bl.x -= extra_width / 2f32;
+    tr.x += extra_width / 2f32;
+  } else if aspect_ratio < natural_aspect_ratio {
+    // extend top
+    let extra_height = (tr.x - bl.x) / aspect_ratio - (tr.y - bl.y);
+    tr.y += extra_height;
+  }
 
   let shift_and_scale =
     solve_translation_scale(bl, Vec2::new(-1f32, -1f32), tr, Vec2::new(1f32, 1f32));

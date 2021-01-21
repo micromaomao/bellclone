@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 specs = { version = "0.16", default-features = false }
 glam = "0.12"
+uuid = "0.8"

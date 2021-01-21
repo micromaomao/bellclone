@@ -2,9 +2,7 @@ use game_core::ec::components::transform::WorldSpaceTransform;
 use golem::{ElementBuffer, UniformValue, VertexBuffer};
 use specs::{Join, Read, ReadStorage, System};
 
-use crate::{ec::components::debug::DebugRect, log, render::DrawingCtx};
-
-use glam::f32::*;
+use crate::{ec::components::debug::DebugRect, render::DrawingCtx};
 
 pub struct DrawDebug;
 impl<'a> System<'a> for DrawDebug {

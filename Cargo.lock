@@ -133,6 +133,7 @@ dependencies = [
  "golem",
  "image",
  "specs",
+ "uuid",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -143,6 +144,7 @@ version = "0.1.0"
 dependencies = [
  "glam",
  "specs",
+ "uuid",
 ]
 
 [[package]]

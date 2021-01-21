@@ -14,6 +14,9 @@ impl WorldSpaceTransform {
   pub fn add(&self, transform: Mat4) -> Self {
     Self(self.0 * transform)
   }
+  pub fn add_to_self(&mut self, transform: Mat4) {
+    self.0 = self.0 * transform;
+  }
   pub fn from_pos(pos: Vec3) -> Self {
     WorldSpaceTransform(Mat4::from_translation(pos))
   }

@@ -66,9 +66,14 @@ fn handle_redraw() {
   let ec = &global.ec;
   let mut ec = ec.borrow_mut();
   ec.update();
-  global.world_manager.borrow_mut().update(&mut *ec);
+  let view_matrix;
   let gr = &global.graphics;
-  let dctx = gr.prepare_render();
+  {
+    let mut wm = global.world_manager.borrow_mut();
+    wm.update(&mut ec);
+    view_matrix = wm.view_matrix(&ec, *gr.aspect_ratio.borrow());
+  }
+  let dctx = gr.prepare_render(view_matrix);
   ec.render(dctx);
 
   let window = web_sys::window().unwrap();
