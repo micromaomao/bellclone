@@ -29,17 +29,23 @@ impl<'a> System<'a> for DrawDebug {
       3, 1, // \
       0, 2, // /
     ]);
-    prog.set_uniform(
-      "uViewMat",
-      UniformValue::Matrix4(dctx.view_mat.to_cols_array()),
-    );
+    prog
+      .set_uniform(
+        "uViewMat",
+        UniformValue::Matrix4(dctx.viewport.view_matrix.to_cols_array()),
+      )
+      .unwrap();
     prog.prepare_draw(&buf, &ele).unwrap();
     for (rect, tr) in (&debug_rects, &transforms).join() {
-      prog.set_uniform(
-        "uObjectTransform",
-        UniformValue::Matrix4(tr.0.to_cols_array()),
-      );
-      prog.set_uniform("uSize", UniformValue::Vector2([rect.width, rect.height]));
+      prog
+        .set_uniform(
+          "uObjectTransform",
+          UniformValue::Matrix4(tr.0.to_cols_array()),
+        )
+        .unwrap();
+      prog
+        .set_uniform("uSize", UniformValue::Vector2([rect.width, rect.height]))
+        .unwrap();
       unsafe { prog.draw_prepared(0..12, golem::GeometryMode::Lines) };
     }
   }

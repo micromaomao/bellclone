@@ -1,5 +1,23 @@
 use glam::f32::*;
 
+#[derive(Debug, Clone, Default)]
+pub struct ViewportInfo {
+  pub view_matrix: Mat4,
+  pub tr: Vec2,
+  pub bl: Vec2,
+  pub width: u32,
+  pub height: u32,
+}
+
+impl ViewportInfo {
+  pub fn raycast(&self, pixel_x: u32, pixel_y: u32) -> Vec2 {
+    Vec2::new(
+      self.bl.x + pixel_x as f32 / self.width as f32 * (self.tr.x - self.bl.x),
+      self.bl.y + pixel_y as f32 / self.height as f32 * (self.tr.y - self.bl.y),
+    )
+  }
+}
+
 pub fn solve_translation_scale(from1: Vec2, to1: Vec2, from2: Vec2, to2: Vec2) -> Mat3 {
   let xscale = (to2.x - to1.x) / (from2.x - from1.x);
   let yscale = (to2.y - to1.y) / (from2.y - from1.y);
@@ -22,7 +40,8 @@ pub fn affine_2d_to_3d(transform: Mat3) -> Mat4 {
   .transpose()
 }
 
-pub fn view_matrix(aspect_ratio: f32, camera_y: f32) -> Mat4 {
+pub fn view_matrix(width: u32, height: u32, camera_y: f32) -> ViewportInfo {
+  let aspect_ratio = (width as f32) / (height as f32);
   let mut bl = Vec2::new(-8f32, camera_y);
   let mut tr = Vec2::new(8f32, camera_y + 9f32);
   let natural_aspect_ratio = 16f32 / 9f32;
@@ -42,12 +61,19 @@ pub fn view_matrix(aspect_ratio: f32, camera_y: f32) -> Mat4 {
     solve_translation_scale(bl, Vec2::new(-1f32, -1f32), tr, Vec2::new(1f32, 1f32));
   let aff4 = affine_2d_to_3d(shift_and_scale);
   let perspective_scale_factor = 0.2f32;
-  Mat4::from_cols_array_2d(&[
+  let view_matrix = Mat4::from_cols_array_2d(&[
     [1f32, 0f32, 0f32, 0f32],
     [0f32, 1f32, 0f32, 0f32],
     [0f32, 0f32, 1f32, 0f32],
     [0f32, 0f32, perspective_scale_factor, 1f32],
   ])
   .transpose()
-    * aff4
+    * aff4;
+  ViewportInfo {
+    view_matrix,
+    tr,
+    bl,
+    width,
+    height,
+  }
 }

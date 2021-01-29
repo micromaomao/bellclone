@@ -40,13 +40,24 @@ pub fn client_init() {
     });
 
     let window = web_sys::window().unwrap();
-    window.add_event_listener_with_callback(
-      "resize",
-      Closure::wrap(Box::new(handle_resize) as Box<dyn Fn()>)
-        .into_js_value()
-        .dyn_ref()
-        .unwrap(),
-    );
+    window
+      .add_event_listener_with_callback(
+        "resize",
+        Closure::wrap(Box::new(handle_resize) as Box<dyn Fn()>)
+          .into_js_value()
+          .dyn_ref()
+          .unwrap(),
+      )
+      .unwrap();
+    window
+      .add_event_listener_with_callback(
+        "mousemove",
+        Closure::wrap(Box::new(handle_mousedown) as Box<dyn Fn(JsValue)>)
+          .into_js_value()
+          .dyn_ref()
+          .unwrap(),
+      )
+      .unwrap();
 
     handle_resize();
     handle_redraw();
@@ -61,26 +72,42 @@ fn handle_resize() {
   gr.resize(width, height);
 }
 
+fn handle_mousedown(evt: JsValue) {
+  let evt = evt.dyn_into::<web_sys::MouseEvent>().unwrap();
+  let point: (i32, i32) = (evt.client_x(), evt.client_y());
+  if point.0 < 0 || point.1 < 0 {
+    unreachable!();
+  }
+  let point: (u32, u32) = (point.0 as u32, point.1 as u32);
+  let global = global::get_ref();
+  let mut ec = global.ec.borrow_mut();
+  ec.pointer_state_mut().update_pos(point);
+}
+
 fn handle_redraw() {
   let global = global::get_ref();
   let ec = &global.ec;
   let mut ec = ec.borrow_mut();
   ec.update();
-  let view_matrix;
+  let viewport;
   let gr = &global.graphics;
   {
     let mut wm = global.world_manager.borrow_mut();
     wm.update(&mut ec);
-    view_matrix = wm.view_matrix(&ec, *gr.aspect_ratio.borrow());
+    let size = *gr.viewport_size.borrow();
+    viewport = wm.view_matrix(&ec, size.0, size.1);
   }
-  let dctx = gr.prepare_render(view_matrix);
+  ec.pointer_state_mut().recalculate_raycast(&viewport);
+  let dctx = gr.prepare_render(viewport);
   ec.render(dctx);
 
   let window = web_sys::window().unwrap();
-  window.request_animation_frame(
-    Closure::wrap(Box::new(handle_redraw) as Box<dyn Fn()>)
-      .into_js_value()
-      .dyn_ref()
-      .unwrap(),
-  );
+  window
+    .request_animation_frame(
+      Closure::wrap(Box::new(handle_redraw) as Box<dyn Fn()>)
+        .into_js_value()
+        .dyn_ref()
+        .unwrap(),
+    )
+    .unwrap();
 }

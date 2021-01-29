@@ -20,4 +20,7 @@ impl WorldSpaceTransform {
   pub fn from_pos(pos: Vec3) -> Self {
     WorldSpaceTransform(Mat4::from_translation(pos))
   }
+  pub fn local_to_world(&self, point: Vec3) -> Vec3 {
+    self.0.transform_point3(point)
+  }
 }
