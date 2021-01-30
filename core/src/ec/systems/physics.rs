@@ -18,7 +18,8 @@ impl<'a> System<'a> for VelocitySystem {
 }
 
 pub struct GravitySystem;
-pub const GRAVITY: f32 = 20f32;
+pub const GRAVITY: f32 = 26f32;
+pub const TERMINAL: f32 = 200f32;
 
 impl<'a> System<'a> for GravitySystem {
   type SystemData = (WriteStorage<'a, Velocity>, Read<'a, DeltaTime>);
@@ -28,6 +29,9 @@ impl<'a> System<'a> for GravitySystem {
     let dv = Vec2::new(0f32, -GRAVITY) * dt;
     for vel in (&mut vels).join() {
       vel.0 += dv;
+      if vel.0.y < -TERMINAL {
+        vel.0.y = -TERMINAL;
+      }
     }
   }
 }

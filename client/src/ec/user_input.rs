@@ -24,7 +24,7 @@ impl PointerState {
     }
   }
 
-  pub fn update_pos(&mut self, pixel_pos: (u32, u32)) {
+  pub fn pointer_move(&mut self, pixel_pos: (u32, u32)) {
     self.pixel_pos.replace(pixel_pos);
   }
 
@@ -38,12 +38,12 @@ impl PointerState {
     }
   }
 
-  pub fn mousedown(&mut self) {
+  pub fn down(&mut self) {
     self.pressing = true;
     self.clicked = true;
   }
 
-  pub fn mouseup(&mut self) {
+  pub fn up(&mut self) {
     self.pressing = false;
   }
 

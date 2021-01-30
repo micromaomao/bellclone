@@ -1,11 +1,12 @@
 use core::panic;
-use std::cell::RefCell;
+use std::{cell::RefCell, unreachable};
 
 use ec::EcCtx;
 use global::Context;
 use render::GraphicsCtx;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::{closure::Closure, prelude::*};
+use web_sys::{AddEventListenerOptions, MouseEvent, TouchEvent};
 use world_manager::WorldManager;
 
 mod ec;
@@ -32,32 +33,37 @@ pub fn client_init() {
       }
     };
     let ec = RefCell::new(EcCtx::new());
-    let we = RefCell::new(WorldManager::new(&mut *ec.borrow_mut()));
+    let wm = RefCell::new(WorldManager::new(&mut *ec.borrow_mut()));
+    wm.borrow_mut().init_offline(&mut *ec.borrow_mut());
     global::init_ctx(Context {
       graphics,
       ec,
-      world_manager: we,
+      world_manager: wm,
     });
 
     let window = web_sys::window().unwrap();
-    window
-      .add_event_listener_with_callback(
-        "resize",
-        Closure::wrap(Box::new(handle_resize) as Box<dyn Fn()>)
-          .into_js_value()
-          .dyn_ref()
-          .unwrap(),
-      )
-      .unwrap();
-    window
-      .add_event_listener_with_callback(
-        "mousemove",
-        Closure::wrap(Box::new(handle_mousedown) as Box<dyn Fn(JsValue)>)
-          .into_js_value()
-          .dyn_ref()
-          .unwrap(),
-      )
-      .unwrap();
+    let mut nopassive_opt = AddEventListenerOptions::new();
+    nopassive_opt.passive(false);
+    let events: &[(&[&str], fn(JsValue))] = &[
+      (&["resize"], handle_resize_evt),
+      (&["mousemove", "touchmove"], handle_pointer_move),
+      (&["mousedown", "touchstart"], handle_pointer_down),
+      (&["mouseup", "touchend", "touchcancel"], handle_pointer_up),
+    ];
+    for (evs, handler) in events.iter() {
+      for &ev in evs.iter() {
+        window
+          .add_event_listener_with_callback_and_add_event_listener_options(
+            ev,
+            Closure::wrap(Box::new(handler) as Box<dyn Fn(JsValue)>)
+              .into_js_value()
+              .dyn_ref()
+              .unwrap(),
+            &nopassive_opt,
+          )
+          .unwrap();
+      }
+    }
 
     handle_resize();
     handle_redraw();
@@ -72,16 +78,71 @@ fn handle_resize() {
   gr.resize(width, height);
 }
 
-fn handle_mousedown(evt: JsValue) {
-  let evt = evt.dyn_into::<web_sys::MouseEvent>().unwrap();
-  let point: (i32, i32) = (evt.client_x(), evt.client_y());
-  if point.0 < 0 || point.1 < 0 {
-    unreachable!();
+fn handle_resize_evt(_evt: JsValue) {
+  handle_resize();
+}
+
+fn get_point_from_pointer_evt(evt: JsValue) -> Option<(u32, u32)> {
+  let mut point: (i32, i32);
+  match evt.dyn_into::<MouseEvent>() {
+    Ok(evt) => {
+      evt.prevent_default();
+      point = (evt.client_x(), evt.client_y());
+      if point.0 < 0 {
+        point.0 = 0;
+      }
+      if point.1 < 0 {
+        point.1 = 0;
+      }
+    }
+    Err(evt) => match evt.dyn_into::<TouchEvent>() {
+      Ok(evt) => {
+        evt.prevent_default();
+        let touches = evt.touches();
+        if touches.length() != 1 {
+          return None;
+        }
+        let t = touches.item(0).unwrap();
+        point = (t.client_x(), t.client_y());
+      }
+      Err(_) => unreachable!(),
+    },
   }
-  let point: (u32, u32) = (point.0 as u32, point.1 as u32);
+  Some((point.0 as u32, point.1 as u32))
+}
+
+fn handle_pointer_move(evt: JsValue) {
   let global = global::get_ref();
   let mut ec = global.ec.borrow_mut();
-  ec.pointer_state_mut().update_pos(point);
+  match get_point_from_pointer_evt(evt) {
+    Some(point) => {
+      ec.pointer_state_mut().pointer_move(point);
+    }
+    None => {
+      ec.pointer_state_mut().up();
+    }
+  }
+}
+
+fn handle_pointer_down(evt: JsValue) {
+  let global = global::get_ref();
+  let mut ec = global.ec.borrow_mut();
+  let mut ps = ec.pointer_state_mut();
+  match get_point_from_pointer_evt(evt) {
+    Some(point) => {
+      ps.pointer_move(point);
+      ps.down();
+    }
+    None => {
+      ps.up();
+    }
+  }
+}
+
+fn handle_pointer_up(evt: JsValue) {
+  let global = global::get_ref();
+  let mut ec = global.ec.borrow_mut();
+  ec.pointer_state_mut().up();
 }
 
 fn handle_redraw() {
@@ -95,7 +156,7 @@ fn handle_redraw() {
     let mut wm = global.world_manager.borrow_mut();
     wm.update(&mut ec);
     let size = *gr.viewport_size.borrow();
-    viewport = wm.view_matrix(&ec, size.0, size.1);
+    viewport = wm.calculate_camera(&ec, size.0, size.1);
   }
   ec.pointer_state_mut().recalculate_raycast(&viewport);
   let dctx = gr.prepare_render(viewport);

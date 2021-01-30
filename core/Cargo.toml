@@ -11,4 +11,5 @@ specs = { version = "0.16", default-features = false }
 glam = "0.12"
 uuid = { version = "0.8", features = ["v4"] }
 rand = { version = "0.8", features = ["default"] }
+rand_distr = "0.4.0"
 getrandom = { version = "0.2", features = ["js"] } # for rand to work on wasm

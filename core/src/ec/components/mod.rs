@@ -6,8 +6,9 @@ use uuid::Uuid;
 pub mod transform;
 pub mod player;
 pub mod physics;
+pub mod bell;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct EntityId(Uuid);
 
 impl Component for EntityId {

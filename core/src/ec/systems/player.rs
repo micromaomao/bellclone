@@ -1,12 +1,18 @@
-use specs::{ReadStorage, System, WriteStorage, Join};
+use specs::{Join, ReadStorage, System, WriteStorage};
 
-use crate::ec::components::{physics::Velocity, player::PlayerComponent, transform::WorldSpaceTransform};
+use crate::ec::components::{
+  physics::Velocity, player::PlayerComponent, transform::WorldSpaceTransform,
+};
 use glam::f32::*;
 
 pub struct PlayerSystem;
 
 impl<'a> System<'a> for PlayerSystem {
-  type SystemData = (ReadStorage<'a, PlayerComponent>, WriteStorage<'a, WorldSpaceTransform>, WriteStorage<'a, Velocity>);
+  type SystemData = (
+    ReadStorage<'a, PlayerComponent>,
+    WriteStorage<'a, WorldSpaceTransform>,
+    WriteStorage<'a, Velocity>,
+  );
 
   fn run(&mut self, (ps, mut trs, mut vels): Self::SystemData) {
     for (player, transform, vel) in (&ps, &mut trs, &mut vels).join() {

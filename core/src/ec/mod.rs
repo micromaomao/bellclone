@@ -23,6 +23,7 @@ pub fn register_common_components(w: &mut World) {
   w.register::<components::EntityId>();
   w.register::<components::physics::Velocity>();
   w.register::<components::physics::Gravity>();
+  w.register::<components::bell::BellComponent>();
 }
 
 pub fn register_common_systems(dispatch: &mut DispatcherBuilder) {
