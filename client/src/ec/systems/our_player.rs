@@ -7,7 +7,10 @@ use game_core::ec::{
 use glam::f32::*;
 use specs::{Entities, Join, Read, ReadStorage, System, WriteStorage};
 
-use crate::ec::{components::player::OurPlayer, user_input::PointerState};
+use crate::ec::{
+  components::player::{OurPlayer, OurPlayerState},
+  user_input::PointerState,
+};
 
 pub struct OurPlayerSystem;
 
@@ -18,6 +21,7 @@ pub const JUMP_SPEED: f32 = 14f32;
 pub const WALK_SPEED: f32 = 6f32;
 pub const JUMP_BELL_SPEED: f32 = 14f32;
 pub const JUMP_BELL_SPEED_CAP: f32 = 16f32;
+pub const FALLING_THRESHOLD_SPEED: f32 = 20f32;
 
 impl<'a> System<'a> for OurPlayerSystem {
   type SystemData = (
@@ -25,17 +29,21 @@ impl<'a> System<'a> for OurPlayerSystem {
     Read<'a, PointerState>,
     Entities<'a>,
     WriteStorage<'a, PlayerComponent>,
-    ReadStorage<'a, OurPlayer>,
+    WriteStorage<'a, OurPlayer>,
     ReadStorage<'a, WorldSpaceTransform>,
     WriteStorage<'a, Velocity>,
     ReadStorage<'a, BellComponent>,
   );
 
-  fn run(&mut self, (dt, ps, ents, mut players, our_players, trs, mut vels, bells): Self::SystemData) {
+  fn run(
+    &mut self,
+    (dt, ps, ents, mut players, mut our_players, trs, mut vels, bells): Self::SystemData,
+  ) {
     let dt = dt.as_secs_f32();
-    for (p, our_p, tr, vel) in (&mut players, &our_players, &trs, &mut vels).join() {
+    for (p, mut our_p, tr, vel) in (&mut players, &mut our_players, &trs, &mut vels).join() {
       let player_pos = tr.position();
       if player_pos.y < 0.01f32 {
+        our_p.state = OurPlayerState::NotStarted;
         if ps.pressing {
           vel.0.y = JUMP_SPEED;
         }
@@ -66,21 +74,31 @@ impl<'a> System<'a> for OurPlayerSystem {
           }
         }
 
-        for (ent, bell, tr) in (&ents, &bells, &trs).join() {
-          let pos = tr.position();
-          let size = bell.size;
-          if (player_pos - pos).length_squared() < size {
-            let mut v = vel.0.y;
-            if v < 0f32 {
-              v = 0f32;
+        if our_p.state != OurPlayerState::Falling {
+          let mut jumped = false;
+          for (ent, bell, tr) in (&ents, &bells, &trs).join() {
+            let pos = tr.position();
+            let size = bell.size;
+            if (player_pos - pos).length_squared() < size {
+              let mut v = vel.0.y;
+              if v < 0f32 {
+                v = 0f32;
+              }
+              v += JUMP_BELL_SPEED;
+              if v > JUMP_BELL_SPEED_CAP {
+                v = JUMP_BELL_SPEED_CAP;
+              }
+              vel.0.y = v;
+              our_p.state = OurPlayerState::Flying;
+              let _ = ents.delete(ent); // todo
+              jumped = true;
+              break;
             }
-            v += JUMP_BELL_SPEED;
-            if v > JUMP_BELL_SPEED_CAP {
-              v = JUMP_BELL_SPEED_CAP;
+          }
+          if !jumped {
+            if vel.0.y < -FALLING_THRESHOLD_SPEED {
+              our_p.state = OurPlayerState::Falling;
             }
-            vel.0.y = v;
-            let _ = ents.delete(ent); // todo
-            break;
           }
         }
       }

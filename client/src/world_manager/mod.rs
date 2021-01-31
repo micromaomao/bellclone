@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use crate::{ec::components::{DrawImage, debug::DebugRect}, global, render::view::view_matrix};
+use crate::{ec::components::{
+    debug::DebugRect,
+    player::{OurPlayer, OurPlayerState},
+    DrawImage,
+  }, global, log, render::view::view_matrix};
 use crate::{ec::EcCtx, render::view::ViewportInfo};
 use game_core::{
   ec::{
@@ -8,6 +12,7 @@ use game_core::{
     DeltaTime,
   },
   gen::BellGenContext,
+  STAGE_MAX_X, STAGE_MIN_HEIGHT, STAGE_MIN_X,
 };
 use glam::f32::*;
 use specs::{Builder, Entity, WorldExt};
@@ -23,10 +28,11 @@ pub struct WorldManager {
   local_bell_gen: Option<BellGenContext>,
 }
 
-pub const CAMERA_OFFSET: f32 = -3f32;
+pub const CAMERA_OFFSET_Y: f32 = -3f32;
+pub const CAMERA_INIT_Y: f32 = -2f32;
 pub const CAMERA_TARGET_EPSILON: f32 = 0.1f32;
-pub const CAMERA_MAX_SPEED: f32 = 50f32;
 pub const CAMERA_SPEED_MUL: f32 = 2f32;
+pub const CAMERA_SWITCH_TO_GROUND_EARLY_PERIOD: f32 = 0.5f32; // secs
 
 impl WorldManager {
   pub fn new(ec: &mut EcCtx) -> Self {
@@ -35,7 +41,7 @@ impl WorldManager {
     WorldManager {
       me: None,
       background: None,
-      camera_y: CAMERA_OFFSET,
+      camera_y: CAMERA_INIT_Y,
       bells: HashMap::new(),
       local_bell_gen: None,
     }
@@ -64,39 +70,55 @@ impl WorldManager {
     if let Some(player_pos) = player_pos {
       let bell_gen = self.local_bell_gen.as_mut().unwrap();
       bell_gen.ensure(player_pos.y + 12f32, &mut ec.world, |ent| {
-        ent.with(DrawImage { texture: &global::get_ref().graphics.images.gopher, size: Vec2::new(1f32, 1f32) })
+        ent.with(DrawImage {
+          texture: &global::get_ref().graphics.images.gopher,
+          size: Vec2::new(1f32, 1f32),
+        })
       })
     }
   }
 
   pub fn calculate_camera(&mut self, ec: &EcCtx, width: u32, height: u32) -> ViewportInfo {
-    let player_y = ec
-      .world
-      .read_storage::<WorldSpaceTransform>()
-      .get(self.me.unwrap())
-      .map(|x| x.position().y)
-      .unwrap_or(0f32);
-    let player_v = ec
-      .world
-      .read_storage::<Velocity>()
-      .get(self.me.unwrap())
-      .map(|x| x.0.y)
-      .unwrap_or(0f32);
+    let w = &ec.world;
+    if self.me.is_none() {
+      self.camera_y = CAMERA_INIT_Y;
+      return view_matrix(width, height, self.camera_y);
+    }
+    let me = self.me.unwrap();
+    let our_player_storage = w.read_storage::<OurPlayer>();
+    let player_state = our_player_storage.get(me).unwrap();
     let mut cam_y = self.camera_y;
-    let target_y = f32::max(player_y + CAMERA_OFFSET, CAMERA_OFFSET);
-    let dt = ec.world.read_resource::<DeltaTime>().as_secs_f32();
-    if target_y - cam_y > CAMERA_TARGET_EPSILON {
-      cam_y += dt * f32::min(CAMERA_MAX_SPEED, CAMERA_SPEED_MUL * (target_y - cam_y));
-    } else if cam_y - target_y > CAMERA_TARGET_EPSILON {
-      cam_y -= dt * f32::min(CAMERA_MAX_SPEED, CAMERA_SPEED_MUL * (cam_y - target_y));
+    let player_y = w
+      .read_storage::<WorldSpaceTransform>()
+      .get(me)
+      .unwrap()
+      .position()
+      .y;
+    let player_v = w.read_storage::<Velocity>().get(me).unwrap().0.y;
+    if player_state.state == OurPlayerState::Falling
+      && player_y < {
+        // calculate threshold y before camera cut to ground.
+        let mut visible_height = STAGE_MIN_HEIGHT;
+        if height > width {
+          visible_height += (height as f32 / width as f32 - 1f32) * (STAGE_MAX_X - STAGE_MIN_X);
+        }
+        visible_height - player_v * CAMERA_SWITCH_TO_GROUND_EARLY_PERIOD
+      }
+    {
+      cam_y = CAMERA_INIT_Y;
+    } else {
+      let target_y = match player_state.state {
+        OurPlayerState::Falling | OurPlayerState::Flying => player_y + CAMERA_OFFSET_Y,
+        OurPlayerState::NotStarted => CAMERA_INIT_Y,
+      };
+      let dt = ec.world.read_resource::<DeltaTime>().as_secs_f32();
+      if target_y - cam_y > CAMERA_TARGET_EPSILON {
+        cam_y += dt * CAMERA_SPEED_MUL * (target_y - cam_y);
+      } else if cam_y - target_y > CAMERA_TARGET_EPSILON {
+        cam_y -= dt * CAMERA_SPEED_MUL * (cam_y - target_y);
+      }
     }
-    cam_y += (player_v * 0.5).min(CAMERA_MAX_SPEED) * dt;
-    if player_y < 10f32 && player_v < -20f32 {
-      cam_y = -2f32;
-    }
-    if cam_y < -2f32 {
-      cam_y = -2f32;
-    }
+    // cam_y += (player_v * 0.5).min(CAMERA_MAX_SPEED) * dt;
     self.camera_y = cam_y;
     view_matrix(width, height, cam_y)
   }

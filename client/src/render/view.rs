@@ -1,3 +1,4 @@
+use game_core::{STAGE_MAX_X, STAGE_MIN_HEIGHT, STAGE_MIN_X};
 use glam::f32::*;
 
 #[derive(Debug, Clone, Default)]
@@ -42,9 +43,9 @@ pub fn affine_2d_to_3d(transform: Mat3) -> Mat4 {
 
 pub fn view_matrix(width: u32, height: u32, camera_y: f32) -> ViewportInfo {
   let aspect_ratio = (width as f32) / (height as f32);
-  let mut bl = Vec2::new(-8f32, camera_y);
-  let mut tr = Vec2::new(8f32, camera_y + 9f32);
-  let natural_aspect_ratio = 16f32 / 9f32;
+  let mut bl = Vec2::new(STAGE_MIN_X, camera_y);
+  let mut tr = Vec2::new(STAGE_MAX_X, camera_y + STAGE_MIN_HEIGHT);
+  const natural_aspect_ratio: f32 = (STAGE_MAX_X - STAGE_MIN_X) / STAGE_MIN_HEIGHT;
 
   if aspect_ratio > natural_aspect_ratio {
     // space around
