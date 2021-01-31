@@ -31,6 +31,7 @@ impl EcCtx {
     game_dispatch.add(OurPlayerSystem, "our_player_system", &[]);
     let mut render_dispatch = DispatcherBuilder::new();
     render_dispatch.add_thread_local(systems::draw_debug::DrawDebug);
+    render_dispatch.add_thread_local(systems::draw_image::DrawImageSystem);
     world.maintain();
     EcCtx {
       world,
@@ -72,4 +73,5 @@ impl EcCtx {
 fn register_client_components(w: &mut World) {
   w.register::<components::debug::DebugRect>();
   w.register::<components::player::OurPlayer>();
+  w.register::<components::DrawImage>();
 }

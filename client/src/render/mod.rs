@@ -1,5 +1,5 @@
 use core::panic;
-use std::cell::RefCell;
+use std::{cell::RefCell, error::Error};
 
 use glam::f32::*;
 use golem::{blend::BlendMode, glow};
@@ -17,6 +17,7 @@ pub struct GraphicsCtx {
   pub canvas: HtmlCanvasElement,
   pub viewport_size: RefCell<(u32, u32)>,
   pub shaders: RefCell<Shaders>,
+  pub images: image_texture::Images,
 }
 
 #[derive(Clone)]
@@ -24,6 +25,7 @@ pub struct DrawingCtx {
   pub glctx: &'static golem::Context,
   pub viewport: ViewportInfo,
   pub shaders: &'static RefCell<Shaders>,
+  pub images: &'static image_texture::Images,
 }
 
 impl Default for DrawingCtx {
@@ -33,7 +35,7 @@ impl Default for DrawingCtx {
 }
 
 impl GraphicsCtx {
-  pub fn init() -> Result<Self, golem::GolemError> {
+  pub fn init() -> Result<Self, Box<dyn Error>> {
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
     let ele: HtmlCanvasElement = document.create_element("canvas").unwrap().unchecked_into();
@@ -47,15 +49,17 @@ impl GraphicsCtx {
         .unwrap()
         .dyn_into()
         .unwrap(),
-    ))?;
+    )).map_err(|e| e.to_string())?;
 
-    let shaders = Shaders::load(&glctx)?;
+    let shaders = Shaders::load(&glctx).map_err(|e| e.to_string())?;
+    let images = image_texture::Images::load(&glctx)?;
 
     Ok(GraphicsCtx {
       glctx,
       canvas: ele,
       viewport_size: RefCell::new((0u32, 0u32)),
       shaders: RefCell::new(shaders),
+      images,
     })
   }
 
@@ -72,13 +76,14 @@ impl GraphicsCtx {
 
     glctx.set_blend_mode(Some(BlendMode::default()));
     glctx.set_depth_test_mode(None);
-    glctx.set_clear_color(0f32, 0f32, 0f32, 1f32);
+    glctx.set_clear_color(0.9765f32, 0.9686f32, 0.9255f32, 1f32);
     glctx.clear();
 
     DrawingCtx {
       glctx,
       viewport,
       shaders: &self.shaders,
+      images: &self.images,
     }
   }
 }

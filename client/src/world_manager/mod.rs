@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ec::components::debug::DebugRect, render::view::view_matrix};
+use crate::{ec::components::{DrawImage, debug::DebugRect}, global, render::view::view_matrix};
 use crate::{ec::EcCtx, render::view::ViewportInfo};
 use game_core::{
   ec::{
@@ -15,8 +15,8 @@ pub mod player;
 use player::{create_background, create_player_local};
 
 pub struct WorldManager {
-  me: Entity,
-  background: Entity,
+  me: Option<Entity>,
+  background: Option<Entity>,
   camera_y: f32,
   /// only used for tracking server bells
   bells: HashMap<EntityId, Entity>,
@@ -30,20 +30,24 @@ pub const CAMERA_SPEED_MUL: f32 = 2f32;
 
 impl WorldManager {
   pub fn new(ec: &mut EcCtx) -> Self {
-    let me = create_player_local(ec);
-    let background = create_background(ec);
     ec.world.maintain();
     // todo
     WorldManager {
-      me,
-      background,
+      me: None,
+      background: None,
       camera_y: CAMERA_OFFSET,
       bells: HashMap::new(),
       local_bell_gen: None,
     }
   }
 
-  pub fn init_offline(&mut self, c: &mut EcCtx) {
+  pub fn init_common(&mut self, ec: &mut EcCtx) {
+    self.background = Some(create_background(ec));
+  }
+
+  pub fn init_offline(&mut self, ec: &mut EcCtx) {
+    self.init_common(ec);
+    self.me = Some(create_player_local(ec));
     self.local_bell_gen = Some(BellGenContext::new());
   }
 
@@ -55,12 +59,12 @@ impl WorldManager {
     let player_pos = ec
       .world
       .read_storage::<WorldSpaceTransform>()
-      .get(self.me)
+      .get(self.me.unwrap())
       .map(|x| x.position());
     if let Some(player_pos) = player_pos {
       let bell_gen = self.local_bell_gen.as_mut().unwrap();
       bell_gen.ensure(player_pos.y + 12f32, &mut ec.world, |ent| {
-        ent.with(DebugRect::with_size(1f32))
+        ent.with(DrawImage { texture: &global::get_ref().graphics.images.gopher, size: Vec2::new(1f32, 1f32) })
       })
     }
   }
@@ -69,13 +73,13 @@ impl WorldManager {
     let player_y = ec
       .world
       .read_storage::<WorldSpaceTransform>()
-      .get(self.me)
+      .get(self.me.unwrap())
       .map(|x| x.position().y)
       .unwrap_or(0f32);
     let player_v = ec
       .world
       .read_storage::<Velocity>()
-      .get(self.me)
+      .get(self.me.unwrap())
       .map(|x| x.0.y)
       .unwrap_or(0f32);
     let mut cam_y = self.camera_y;

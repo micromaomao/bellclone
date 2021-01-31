@@ -10,6 +10,7 @@ use crate::ec::components::bell::build_bell;
 const LOWEST_Y: f32 = 2f32;
 const X_VARIATION: f32 = 3f32;
 const Y_VARIATION: Range<f32> = 1.8f32..2.8f32;
+const INIT_SIZE: f32 = 0.6f32;
 
 #[derive(Debug)]
 pub struct BellGenContext {
@@ -43,7 +44,7 @@ impl BellGenContext {
       new_x = -7f32;
     }
     let point = Vec2::new(new_x, new_y);
-    let ent = attach(build_bell(world, 0.3f32, point)).build();
+    let ent = attach(build_bell(world, INIT_SIZE, point)).build();
     self.last_point = point;
     ent
   }

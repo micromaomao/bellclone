@@ -34,12 +34,16 @@ pub fn client_init() {
     };
     let ec = RefCell::new(EcCtx::new());
     let wm = RefCell::new(WorldManager::new(&mut *ec.borrow_mut()));
-    wm.borrow_mut().init_offline(&mut *ec.borrow_mut());
     global::init_ctx(Context {
       graphics,
       ec,
       world_manager: wm,
     });
+    let global = global::get_ref();
+    global
+      .world_manager
+      .borrow_mut()
+      .init_offline(&mut *global.ec.borrow_mut());
 
     let window = web_sys::window().unwrap();
     let mut nopassive_opt = AddEventListenerOptions::new();

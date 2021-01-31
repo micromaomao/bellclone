@@ -1,7 +1,4 @@
-use crate::ec::{
-  components::{debug::DebugRect, player::OurPlayer},
-  EcCtx,
-};
+use crate::{ec::{EcCtx, components::{DrawImage, debug::DebugRect, player::OurPlayer}}, global};
 use game_core::ec::components::{player::build_player, transform::WorldSpaceTransform};
 use glam::f32::*;
 use specs::{Builder, Entity, WorldExt};
@@ -9,7 +6,7 @@ use specs::{Builder, Entity, WorldExt};
 pub fn create_player_local(ec: &mut EcCtx) -> Entity {
   build_player(&mut ec.world)
     .with(OurPlayer {})
-    .with(DebugRect::with_size(0.2f32))
+    .with(DrawImage { texture: &global::get_ref().graphics.images.crab, size: Vec2::new(1f32, 1f32)})
     .build()
 }
 
