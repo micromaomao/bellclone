@@ -6,14 +6,10 @@ use crate::{ec::components::{
     DrawImage,
   }, global, log, render::view::view_matrix};
 use crate::{ec::EcCtx, render::view::ViewportInfo};
-use game_core::{
-  ec::{
+use game_core::{STAGE_MAX_X, STAGE_MIN_HEIGHT, STAGE_MIN_X, STAGE_WIDTH, ec::{
     components::{physics::Velocity, transform::WorldSpaceTransform, EntityId},
     DeltaTime,
-  },
-  gen::BellGenContext,
-  STAGE_MAX_X, STAGE_MIN_HEIGHT, STAGE_MIN_X,
-};
+  }, gen::BellGenContext};
 use glam::f32::*;
 use specs::{Builder, Entity, WorldExt};
 pub mod player;
@@ -100,7 +96,7 @@ impl WorldManager {
         // calculate threshold y before camera cut to ground.
         let mut visible_height = STAGE_MIN_HEIGHT;
         if height > width {
-          visible_height += (height as f32 / width as f32 - 1f32) * (STAGE_MAX_X - STAGE_MIN_X);
+          visible_height += (height as f32 / width as f32 - 1f32) * (STAGE_WIDTH);
         }
         visible_height - player_v * CAMERA_SWITCH_TO_GROUND_EARLY_PERIOD
       }
