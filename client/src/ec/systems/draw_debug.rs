@@ -41,18 +41,12 @@ impl<'a> System<'a> for DrawDebug {
     let mut shaders = dctx.shaders.borrow_mut();
     let prog = &mut shaders.debug_rect;
     prog.bind();
-    prog
-      .set_uniform(
-        "uViewMat",
-        UniformValue::Matrix4(dctx.viewport.view_matrix.to_cols_array()),
-      )
-      .unwrap();
     prog.prepare_draw(&self.buf, &self.ele).unwrap();
     for (rect, tr) in (&debug_rects, &transforms).join() {
       prog
         .set_uniform(
-          "uObjectTransform",
-          UniformValue::Matrix4(tr.0.to_cols_array()),
+          "uTransform",
+          UniformValue::Matrix4((dctx.viewport.view_matrix * tr.0).to_cols_array()),
         )
         .unwrap();
       prog

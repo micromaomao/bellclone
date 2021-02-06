@@ -28,8 +28,7 @@ impl Shaders {
           vertex_input: &[Attribute::new("aVertexPosition", AttributeType::Vector(D2))],
           fragment_input: &[],
           uniforms: &[
-            Uniform::new("uViewMat", UniformType::Matrix(D4)),
-            Uniform::new("uObjectTransform", UniformType::Matrix(D4)),
+            Uniform::new("uTransform", UniformType::Matrix(D4)),
             Uniform::new("uSize", UniformType::Vector(golem::NumberType::Float, D2)),
           ],
           vertex_shader: src!("./shaders/debug/rect.vert.glsl"),
@@ -42,8 +41,7 @@ impl Shaders {
           vertex_input: &[Attribute::new("aVertexPosition", AttributeType::Vector(D2))],
           fragment_input: &[Attribute::new("oTexCord", AttributeType::Vector(D2))],
           uniforms: &[
-            Uniform::new("uViewMat", UniformType::Matrix(D4)),
-            Uniform::new("uObjectTransform", UniformType::Matrix(D4)),
+            Uniform::new("uTransform", UniformType::Matrix(D4)),
             Uniform::new("uSize", UniformType::Vector(golem::NumberType::Float, D2)),
             Uniform::new("tex ", UniformType::Sampler2D),
             Uniform::new("alpha", UniformType::Scalar(golem::NumberType::Float)),
