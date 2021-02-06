@@ -4,7 +4,7 @@ use game_core::ec::components::transform::WorldSpaceTransform;
 use golem::{ElementBuffer, UniformValue, VertexBuffer};
 use specs::{Join, Read, ReadStorage, System};
 
-use crate::{ec::components::DrawImage, render::DrawingCtx};
+use crate::{ec::components::{DrawImage, player::OurPlayer}, render::DrawingCtx};
 
 pub struct DrawImageSystem;
 
@@ -13,9 +13,10 @@ impl<'a> System<'a> for DrawImageSystem {
     Read<'a, DrawingCtx>,
     ReadStorage<'a, WorldSpaceTransform>,
     ReadStorage<'a, DrawImage>,
+    ReadStorage<'a, OurPlayer>,
   );
 
-  fn run(&mut self, (dctx, trs, imgs): Self::SystemData) {
+  fn run(&mut self, (dctx, trs, imgs, ops): Self::SystemData) {
     let mut shaders = dctx.shaders.borrow_mut();
     let prog = &mut shaders.image;
     prog.bind();
@@ -39,18 +40,33 @@ impl<'a> System<'a> for DrawImageSystem {
       .unwrap();
     prog.set_uniform("tex", UniformValue::Int(1)).unwrap();
     prog.prepare_draw(&buf, &ele).unwrap();
-    for (tr, img) in (&trs, &imgs).join() {
-      prog
-        .set_uniform(
-          "uObjectTransform",
-          UniformValue::Matrix4(tr.0.to_cols_array()),
-        )
-        .unwrap();
-      img.texture.gl_texture.set_active(NonZeroU32::new(1).unwrap());
-      prog
-        .set_uniform("uSize", UniformValue::Vector2([img.size.x, img.size.y]))
-        .unwrap();
-      unsafe { prog.draw_prepared(0..4, golem::GeometryMode::TriangleStrip) };
+    macro_rules! d {
+      ($tr:ident, $img:ident) => {
+        prog
+          .set_uniform(
+            "uObjectTransform",
+            UniformValue::Matrix4($tr.0.to_cols_array()),
+          )
+          .unwrap();
+        prog
+          .set_uniform("alpha", UniformValue::Float($img.alpha))
+          .unwrap();
+        $img
+          .texture
+          .gl_texture
+          .set_active(NonZeroU32::new(1).unwrap());
+        prog
+          .set_uniform("uSize", UniformValue::Vector2([$img.size.x, $img.size.y]))
+          .unwrap();
+        unsafe { prog.draw_prepared(0..4, golem::GeometryMode::TriangleStrip) };
+      };
+    }
+    // so that we draw our player above anything else.
+    for (tr, img, _) in (&trs, &imgs, !&ops).join() {
+      d!(tr, img);
+    }
+    for (tr, img, _) in (&trs, &imgs, &ops).join() {
+      d!(tr, img);
     }
   }
 }

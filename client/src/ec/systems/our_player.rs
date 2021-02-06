@@ -5,12 +5,19 @@ use game_core::ec::{
   DeltaTime,
 };
 use glam::f32::*;
-use specs::{Entities, Join, Read, ReadStorage, System, WriteStorage};
+use specs::{Entities, Entity, Join, Read, ReadStorage, System, WriteStorage};
 
 use crate::ec::{
-  components::player::{OurPlayer, OurPlayerState},
+  components::{
+    bell::OurJumpableBell,
+    collision_star::CollisionStar,
+    player::{OurPlayer, OurPlayerState},
+    DrawImage,
+  },
   user_input::PointerState,
 };
+
+use super::collision_star;
 
 pub struct OurPlayerSystem;
 
@@ -30,17 +37,33 @@ impl<'a> System<'a> for OurPlayerSystem {
     Entities<'a>,
     WriteStorage<'a, PlayerComponent>,
     WriteStorage<'a, OurPlayer>,
-    ReadStorage<'a, WorldSpaceTransform>,
+    WriteStorage<'a, WorldSpaceTransform>,
     WriteStorage<'a, Velocity>,
     ReadStorage<'a, BellComponent>,
+    WriteStorage<'a, OurJumpableBell>,
+    WriteStorage<'a, CollisionStar>,
+    WriteStorage<'a, DrawImage>,
   );
 
   fn run(
     &mut self,
-    (dt, ps, ents, mut players, mut our_players, trs, mut vels, bells): Self::SystemData,
+    (
+      dt,
+      ps,
+      ents,
+      mut players,
+      mut our_players,
+      mut trs,
+      mut vels,
+      bells,
+      mut jumpable_bell_markers,
+      mut colstars,
+      mut draw_images,
+    ): Self::SystemData,
   ) {
     let dt = dt.as_secs_f32();
-    for (p, mut our_p, tr, vel) in (&mut players, &mut our_players, &trs, &mut vels).join() {
+    for (p_entid, p, mut our_p, vel) in (&ents, &mut players, &mut our_players, &mut vels).join() {
+      let tr = trs.get(p_entid).unwrap();
       let player_pos = tr.position();
       if player_pos.y < 0.01f32 {
         our_p.state = OurPlayerState::NotStarted;
@@ -75,8 +98,8 @@ impl<'a> System<'a> for OurPlayerSystem {
         }
 
         if our_p.state != OurPlayerState::Falling {
-          let mut jumped = false;
-          for (ent, bell, tr) in (&ents, &bells, &trs).join() {
+          let mut jumped_from: Option<Entity> = None;
+          for (ent, bell, tr, _) in (&ents, &bells, &trs, &jumpable_bell_markers).join() {
             let pos = tr.position();
             let size = bell.size;
             if (player_pos - pos).length_squared() < size {
@@ -90,12 +113,15 @@ impl<'a> System<'a> for OurPlayerSystem {
               }
               vel.0.y = v;
               our_p.state = OurPlayerState::Flying;
-              let _ = ents.delete(ent); // todo
-              jumped = true;
+              jumped_from = Some(ent);
               break;
             }
           }
-          if !jumped {
+          if let Some(bell) = jumped_from {
+            jumpable_bell_markers.remove(bell);
+            let pos = trs.get(bell).unwrap().position();
+            collision_star::build_stars((&ents, &mut colstars, &mut draw_images, &mut trs), pos);
+          } else {
             if vel.0.y < -FALLING_THRESHOLD_SPEED {
               our_p.state = OurPlayerState::Falling;
             }

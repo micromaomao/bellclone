@@ -46,6 +46,7 @@ impl Shaders {
             Uniform::new("uObjectTransform", UniformType::Matrix(D4)),
             Uniform::new("uSize", UniformType::Vector(golem::NumberType::Float, D2)),
             Uniform::new("tex ", UniformType::Sampler2D),
+            Uniform::new("alpha", UniformType::Scalar(golem::NumberType::Float)),
           ],
           vertex_shader: src!("./shaders/image.vert.glsl"),
           fragment_shader: src!("./shaders/image.frag.glsl"),

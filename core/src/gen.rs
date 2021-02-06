@@ -8,10 +8,12 @@ use specs::{Builder, Entity, EntityBuilder, World};
 use crate::{STAGE_MAX_X, STAGE_WIDTH, ec::components::bell::build_bell};
 
 const LOWEST_Y: f32 = 2f32;
-const INIT_X_VARIATION: f32 = 3f32;
+const INIT_X_VARIATION: f32 = 2f32;
+const MAX_X_VARIATION: f32 = 5f32;
 const Y_VARIATION: Range<f32> = 1.8f32..2.8f32;
 const INIT_SIZE: f32 = 0.6f32;
-const DIFFICULTY_RAISE_COUNTER: u32 = 30u32;
+const MIN_SIZE: f32 = 0.3f32;
+const DIFFICULTY_RAISE_COUNTER: u32 = 50u32;
 
 #[derive(Debug)]
 pub struct BellGenContext {
@@ -42,7 +44,11 @@ impl BellGenContext {
     } else {
       new_y = self.last_point.y + rng.gen_range(Y_VARIATION);
     }
-    let dx = rng.sample::<f32, _>(StandardNormal) * INIT_X_VARIATION * self.x_variation_scaling;
+    let mut x_var = INIT_X_VARIATION * self.x_variation_scaling;
+    if x_var > MAX_X_VARIATION {
+      x_var = MAX_X_VARIATION;
+    }
+    let dx = rng.sample::<f32, _>(StandardNormal) * x_var;
     let mut new_x = self.last_point.x + dx;
     if new_x > 7f32 {
       new_x = 7f32;
@@ -63,12 +69,9 @@ impl BellGenContext {
 
   pub fn raise_difficulty(&mut self) {
     self.x_variation_scaling += 0.5f32;
-    if self.x_variation_scaling > STAGE_WIDTH / 2f32 {
-      self.x_variation_scaling = STAGE_WIDTH / 2f32;
-    }
     self.bell_size *= 0.9;
-    if self.bell_size < 0.1f32 {
-      self.bell_size = 0.1f32;
+    if self.bell_size < MIN_SIZE {
+      self.bell_size = MIN_SIZE;
     }
   }
 

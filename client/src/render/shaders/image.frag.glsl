@@ -3,9 +3,11 @@
 in vec2 oTexCord;
 
 uniform sampler2D tex;
+uniform float alpha;
 
 ////
 
 void main() {
-  gl_FragColor = texture(tex, oTexCord);
+  vec4 samp = texture(tex, oTexCord);
+  gl_FragColor = vec4(samp.rgb, samp.a * alpha);
 }

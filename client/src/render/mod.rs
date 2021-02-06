@@ -3,9 +3,11 @@ use std::{cell::RefCell, error::Error};
 
 use glam::f32::*;
 use golem::{blend::BlendMode, glow};
+use js_sys::Object;
+use js_sys::Reflect;
 use shader_program::Shaders;
 use view::{affine_2d_to_3d, ViewportInfo};
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{JsCast, JsValue};
 use web_sys::HtmlCanvasElement;
 
 pub mod image_texture;
@@ -42,14 +44,17 @@ impl GraphicsCtx {
     web_sys::Node::from(document.body().unwrap())
       .append_child(&ele)
       .unwrap();
+    let glopt = Object::new();
+    Reflect::set(&glopt, &JsValue::from_str("alpha"), &JsValue::from_bool(false)).unwrap();
     let glctx = golem::Context::from_glow(glow::Context::from_webgl1_context(
       ele
-        .get_context("webgl")
+        .get_context_with_context_options("webgl", &glopt)
         .unwrap()
         .unwrap()
         .dyn_into()
         .unwrap(),
-    )).map_err(|e| e.to_string())?;
+    ))
+    .map_err(|e| e.to_string())?;
 
     let shaders = Shaders::load(&glctx).map_err(|e| e.to_string())?;
     let images = image_texture::Images::load(&glctx)?;
@@ -76,7 +81,8 @@ impl GraphicsCtx {
 
     glctx.set_blend_mode(Some(BlendMode::default()));
     glctx.set_depth_test_mode(None);
-    glctx.set_clear_color(0.9765f32, 0.9686f32, 0.9255f32, 1f32);
+    // glctx.set_clear_color(0.9765f32, 0.9686f32, 0.9255f32, 1f32);
+    glctx.set_clear_color(51f32/255f32, 0f32, 102f32/255f32, 1f32);
     glctx.clear();
 
     DrawingCtx {

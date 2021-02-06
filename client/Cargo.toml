@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 web-sys = { version = "0.3", features = ["console", "Window", "Performance", "MouseEvent", "TouchEvent", "TouchList", "Touch", "AddEventListenerOptions"] }
+js-sys = { version = "0.3" }
 wasm-bindgen = { version = "0.2", features = ["default", "serde-serialize"] }
 golem = { version = "0.1", features = ["web-sys"] }
 game_core = { path = "../core" }

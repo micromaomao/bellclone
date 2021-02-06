@@ -45,14 +45,14 @@ pub fn view_matrix(width: u32, height: u32, camera_y: f32) -> ViewportInfo {
   let aspect_ratio = (width as f32) / (height as f32);
   let mut bl = Vec2::new(STAGE_MIN_X, camera_y);
   let mut tr = Vec2::new(STAGE_MAX_X, camera_y + STAGE_MIN_HEIGHT);
-  const natural_aspect_ratio: f32 = STAGE_WIDTH / STAGE_MIN_HEIGHT;
+  const NATURAL_ASPECT_RATIO: f32 = STAGE_WIDTH / STAGE_MIN_HEIGHT;
 
-  if aspect_ratio > natural_aspect_ratio {
+  if aspect_ratio > NATURAL_ASPECT_RATIO {
     // space around
     let extra_width = (tr.y - bl.y) * aspect_ratio - (tr.x - bl.x);
     bl.x -= extra_width / 2f32;
     tr.x += extra_width / 2f32;
-  } else if aspect_ratio < natural_aspect_ratio {
+  } else if aspect_ratio < NATURAL_ASPECT_RATIO {
     // extend top
     let extra_height = (tr.x - bl.x) / aspect_ratio - (tr.y - bl.y);
     tr.y += extra_height;

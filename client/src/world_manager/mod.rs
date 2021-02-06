@@ -1,17 +1,25 @@
 use std::collections::HashMap;
 
-use crate::{ec::components::{
-    debug::DebugRect,
+use crate::{
+  ec::components::{
+    bell::OurJumpableBell,
     player::{OurPlayer, OurPlayerState},
     DrawImage,
-  }, global, log, render::view::view_matrix};
+  },
+  global,
+  render::view::view_matrix,
+};
 use crate::{ec::EcCtx, render::view::ViewportInfo};
-use game_core::{STAGE_MAX_X, STAGE_MIN_HEIGHT, STAGE_MIN_X, STAGE_WIDTH, ec::{
+use game_core::{
+  ec::{
     components::{physics::Velocity, transform::WorldSpaceTransform, EntityId},
     DeltaTime,
-  }, gen::BellGenContext};
+  },
+  gen::BellGenContext,
+  STAGE_MIN_HEIGHT, STAGE_WIDTH,
+};
 use glam::f32::*;
-use specs::{Builder, Entity, WorldExt};
+use specs::{Builder, Entity, EntityBuilder, WorldExt};
 pub mod player;
 use player::{create_background, create_player_local};
 
@@ -24,10 +32,10 @@ pub struct WorldManager {
   local_bell_gen: Option<BellGenContext>,
 }
 
-pub const CAMERA_OFFSET_Y: f32 = -3f32;
+pub const CAMERA_OFFSET_Y: f32 = -4f32;
 pub const CAMERA_INIT_Y: f32 = -2f32;
 pub const CAMERA_TARGET_EPSILON: f32 = 0.1f32;
-pub const CAMERA_SPEED_MUL: f32 = 2f32;
+pub const CAMERA_SPEED_MUL: f32 = 4f32;
 pub const CAMERA_SWITCH_TO_GROUND_EARLY_PERIOD: f32 = 0.5f32; // secs
 
 impl WorldManager {
@@ -57,6 +65,16 @@ impl WorldManager {
     self.offline_update(ec);
   }
 
+  fn attach_bell_client_commponent(ent: EntityBuilder) -> EntityBuilder {
+    ent
+      .with(DrawImage {
+        texture: &global::get_ref().graphics.images.gopher,
+        size: Vec2::new(1f32, 1f32),
+        alpha: 1f32,
+      })
+      .with(OurJumpableBell)
+  }
+
   pub fn offline_update(&mut self, ec: &mut EcCtx) {
     let player_pos = ec
       .world
@@ -65,12 +83,11 @@ impl WorldManager {
       .map(|x| x.position());
     if let Some(player_pos) = player_pos {
       let bell_gen = self.local_bell_gen.as_mut().unwrap();
-      bell_gen.ensure(player_pos.y + 12f32, &mut ec.world, |ent| {
-        ent.with(DrawImage {
-          texture: &global::get_ref().graphics.images.gopher,
-          size: Vec2::new(1f32, 1f32),
-        })
-      })
+      bell_gen.ensure(
+        player_pos.y + 12f32,
+        &mut ec.world,
+        Self::attach_bell_client_commponent,
+      )
     }
   }
 

@@ -132,6 +132,7 @@ dependencies = [
  "glam",
  "golem",
  "image",
+ "js-sys",
  "specs",
  "uuid",
  "wasm-bindgen",

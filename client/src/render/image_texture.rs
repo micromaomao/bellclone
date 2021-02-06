@@ -21,7 +21,9 @@ impl LoadedTexture {
     decoded.read_image(&mut buf[..])?;
     let mut tex = Texture::new(&glctx).map_err(|e| e.to_string())?;
     tex.set_image(Some(&buf[..]), width, height, golem::ColorFormat::RGBA);
-    tex.set_minification(golem::TextureFilter::LinearMipmapLinear).map_err(|e| e.to_string())?;
+    tex
+      .set_minification(golem::TextureFilter::LinearMipmapLinear)
+      .map_err(|e| e.to_string())?;
     Ok(LoadedTexture {
       gl_texture: tex,
       width,
@@ -46,4 +48,4 @@ macro_rules! define_images {
   };
 }
 
-define_images!(crab, gopher);
+define_images!(crab, gopher, star);

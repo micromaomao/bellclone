@@ -3,7 +3,6 @@ use std::ops::{Deref, DerefMut};
 use game_core::ec::{register_common_components, register_common_systems, DeltaTime};
 use specs::{Dispatcher, DispatcherBuilder};
 use specs::{World, WorldExt};
-use systems::our_player::OurPlayerSystem;
 use user_input::PointerState;
 
 use crate::{render::DrawingCtx, webapi_utils::perf_now_f64};
@@ -11,6 +10,8 @@ use crate::{render::DrawingCtx, webapi_utils::perf_now_f64};
 pub mod components;
 pub mod systems;
 pub mod user_input;
+
+pub const GAME_SPEED: f32 = 1f32;
 
 pub struct EcCtx {
   pub world: World,
@@ -28,7 +29,17 @@ impl EcCtx {
     world.insert(PointerState::default());
     let mut game_dispatch = DispatcherBuilder::new();
     register_common_systems(&mut game_dispatch);
-    game_dispatch.add(OurPlayerSystem, "our_player_system", &[]);
+    game_dispatch.add(
+      systems::our_player::OurPlayerSystem,
+      "our_player_system",
+      &[],
+    );
+    game_dispatch.add(
+      systems::bell::BellSystem,
+      "bell_system",
+      &["our_player_system"],
+    );
+    game_dispatch.add(systems::collision_star::CollisionStarSystem, "collision_star_system", &["bell_system"]);
     let mut render_dispatch = DispatcherBuilder::new();
     render_dispatch.add_thread_local(systems::draw_debug::DrawDebug);
     render_dispatch.add_thread_local(systems::draw_image::DrawImageSystem);
@@ -51,7 +62,7 @@ impl EcCtx {
     }
     {
       let mut w_dt = self.world.write_resource::<DeltaTime>();
-      *w_dt = DeltaTime::from_secs_f32(new_dt / 1000f32);
+      *w_dt = DeltaTime::from_secs_f32(new_dt / 1000f32 * GAME_SPEED);
     }
 
     self.game_dispatch.dispatch(&self.world);
@@ -73,5 +84,7 @@ impl EcCtx {
 fn register_client_components(w: &mut World) {
   w.register::<components::debug::DebugRect>();
   w.register::<components::player::OurPlayer>();
+  w.register::<components::bell::OurJumpableBell>();
+  w.register::<components::collision_star::CollisionStar>();
   w.register::<components::DrawImage>();
 }
