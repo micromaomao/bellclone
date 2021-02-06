@@ -13,6 +13,7 @@ use web_sys::{HtmlCanvasElement, WebGlRenderingContext};
 pub mod image_texture;
 pub mod shader_program;
 pub mod view;
+pub mod numbers;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ViewportSize {

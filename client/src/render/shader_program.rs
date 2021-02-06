@@ -5,6 +5,7 @@ pub struct Shaders {
   pub debug_rect: ShaderProgram,
   pub image: ShaderProgram,
   pub postprocess: ShaderProgram,
+  pub simple2d: ShaderProgram,
 }
 fn fix_shader_source(source: &'static str) -> &'static str {
   if let Some(sep_comment_start) = source.find("////\n") {
@@ -48,7 +49,7 @@ impl Shaders {
             Uniform::new("alpha", UniformType::Scalar(golem::NumberType::Float)),
           ],
           vertex_shader: src!("./shaders/image.vert.glsl"),
-          fragment_shader: src!("./shaders/image.frag.glsl"),
+          fragment_shader: src!("./shaders/simple2d.frag.glsl"),
         },
       )?,
       postprocess: ShaderProgram::new(
@@ -62,7 +63,24 @@ impl Shaders {
           ],
           vertex_shader: src!("./shaders/postprocess.vert.glsl"),
           fragment_shader: src!("./shaders/postprocess.frag.glsl"),
-        }
+        },
+      )?,
+      simple2d: ShaderProgram::new(
+        glctx,
+        ShaderDescription {
+          vertex_input: &[
+            Attribute::new("aVertexPosition", AttributeType::Vector(D2)),
+            Attribute::new("aTexCord", AttributeType::Vector(D2)),
+          ],
+          fragment_input: &[Attribute::new("oTexCord", AttributeType::Vector(D2))],
+          uniforms: &[
+            Uniform::new("uTransform", UniformType::Matrix(D4)),
+            Uniform::new("tex ", UniformType::Sampler2D),
+            Uniform::new("alpha", UniformType::Scalar(golem::NumberType::Float)),
+          ],
+          vertex_shader: src!("./shaders/simple2d.vert.glsl"),
+          fragment_shader: src!("./shaders/simple2d.frag.glsl"),
+        },
       )?,
     })
   }

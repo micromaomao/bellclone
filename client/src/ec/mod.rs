@@ -157,9 +157,12 @@ impl EcCtx {
 fn register_client_components(w: &mut World) {
   w.register::<components::debug::DebugRect>();
   w.register::<components::player::OurPlayer>();
+  w.register::<components::player::WithScoreDisplay>();
   w.register::<components::bell::OurJumpableBell>();
   w.register::<components::collision_star::CollisionStar>();
   w.register::<components::DrawImage>();
+  w.register::<components::draw_numbers::DrawNumbersComponent>();
+  w.register::<components::effects::FadeOut>();
 }
 
 fn build_game_dispatch<'a, 'b>() -> Dispatcher<'a, 'b> {
@@ -180,6 +183,12 @@ fn build_game_dispatch<'a, 'b>() -> Dispatcher<'a, 'b> {
     "collision_star_system",
     &["bell_system"],
   );
+  game_dispatch.add(
+    systems::players::ShowPlayerScoreSystem,
+    "show_player_score_system",
+    &["our_player_system"],
+  );
+  game_dispatch.add(systems::effects::FadeOutSystem, "fade_out_system", &[]);
   game_dispatch.build()
 }
 
@@ -188,5 +197,6 @@ fn build_render_dispatch<'a, 'b>(graphics: &GraphicsCtx) -> Dispatcher<'a, 'b> {
   let glctx = &graphics.glctx;
   render_dispatch.add_thread_local(systems::draw_debug::DrawDebug::new(glctx).unwrap());
   render_dispatch.add_thread_local(systems::draw_image::DrawImageSystem::new(glctx).unwrap());
+  render_dispatch.add_thread_local(systems::draw_numbers::DrawNumbersSystem::new(glctx).unwrap());
   render_dispatch.build()
 }

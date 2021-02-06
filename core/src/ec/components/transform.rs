@@ -1,7 +1,7 @@
 use glam::f32::*;
 use specs::{Component, VecStorage};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct WorldSpaceTransform(pub Mat4);
 impl Component for WorldSpaceTransform {
   type Storage = VecStorage<Self>;

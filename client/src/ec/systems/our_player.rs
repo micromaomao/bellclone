@@ -11,6 +11,8 @@ use crate::ec::{
   components::{
     bell::OurJumpableBell,
     collision_star::CollisionStar,
+    draw_numbers::{Align, DrawNumbersComponent},
+    effects::FadeOut,
     player::{OurPlayer, OurPlayerState},
     DrawImage,
   },
@@ -44,6 +46,8 @@ impl<'a> System<'a> for OurPlayerSystem {
     WriteStorage<'a, OurJumpableBell>,
     WriteStorage<'a, CollisionStar>,
     WriteStorage<'a, DrawImage>,
+    WriteStorage<'a, FadeOut>,
+    WriteStorage<'a, DrawNumbersComponent>,
   );
 
   fn run(
@@ -60,6 +64,8 @@ impl<'a> System<'a> for OurPlayerSystem {
       mut jumpable_bell_markers,
       mut colstars,
       mut draw_images,
+      mut fade_outs,
+      mut dns,
     ): Self::SystemData,
   ) {
     let dt = dt.as_secs_f32();
@@ -122,6 +128,14 @@ impl<'a> System<'a> for OurPlayerSystem {
             jumpable_bell_markers.remove(bell);
             let pos = trs.get(bell).unwrap().position();
             collision_star::build_stars((&ents, &mut colstars, &mut draw_images, &mut trs), pos);
+            let mut dn = DrawNumbersComponent::new(1.0f32, Align::Center);
+            dn.set_number(our_p.next_bell_score);
+            p.score += our_p.next_bell_score;
+            our_p.next_bell_score += 10;
+            let sg = ents.create();
+            fade_outs.insert(sg, FadeOut::new(0.6f32)).unwrap();
+            dns.insert(sg, dn).unwrap();
+            trs.insert(sg, WorldSpaceTransform::from_pos(pos + Vec3::unit_y() * 0.2f32).add(Mat4::from_scale(Vec3::new(0.2f32, 0.2f32, 1f32)))).unwrap();
           } else {
             if vel.0.y < -FALLING_THRESHOLD_SPEED {
               our_p.state = OurPlayerState::Falling;

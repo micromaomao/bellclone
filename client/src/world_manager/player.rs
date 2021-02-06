@@ -17,6 +17,7 @@ pub fn create_player_local(ec: &mut EcCtx) -> Entity {
   build_player(&mut ec.world)
     .with(OurPlayer {
       state: OurPlayerState::NotStarted,
+      next_bell_score: 10u128,
     })
     .with(DrawImage {
       texture: &global::get_ref().graphics.images.crab,
