@@ -5,7 +5,7 @@ use rand::{Rng};
 use rand_distr::StandardNormal;
 use specs::{Builder, Entity, EntityBuilder, World};
 
-use crate::{STAGE_MAX_X, STAGE_WIDTH, ec::components::bell::build_bell};
+use crate::{STAGE_MAX_X, STAGE_MIN_X, ec::components::bell::build_bell};
 
 const LOWEST_Y: f32 = 2f32;
 const INIT_X_VARIATION: f32 = 2f32;
@@ -50,11 +50,11 @@ impl BellGenContext {
     }
     let dx = rng.sample::<f32, _>(StandardNormal) * x_var;
     let mut new_x = self.last_point.x + dx;
-    if new_x > 7f32 {
-      new_x = 7f32;
+    if new_x > STAGE_MAX_X - 1f32 {
+      new_x = STAGE_MAX_X - 1f32;
     }
-    if new_x < -7f32 {
-      new_x = -7f32;
+    if new_x < STAGE_MIN_X + 1f32 {
+      new_x = STAGE_MIN_X + 1f32;
     }
     let point = Vec2::new(new_x, new_y);
     let ent = attach(build_bell(world, self.bell_size, point)).build();
