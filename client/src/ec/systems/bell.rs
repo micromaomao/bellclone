@@ -1,7 +1,7 @@
 use game_core::ec::components::bell::BellComponent;
 use specs::{Join, ReadStorage, System, WriteStorage};
 
-use crate::ec::components::{bell::OurJumpableBell, DrawImage};
+use crate::ec::components::{bell::OurJumpableBell, player::OurPlayer, DrawImage};
 
 pub struct BellSystem;
 
@@ -15,6 +15,9 @@ impl<'a> System<'a> for BellSystem {
   fn run(&mut self, (bells, our_jumpable_bells, mut draw_images): Self::SystemData) {
     for (_, _, dimg) in (&bells, !&our_jumpable_bells, &mut draw_images).join() {
       dimg.alpha = 0.3f32;
+    }
+    for (_, _, dimg) in (&bells, &our_jumpable_bells, &mut draw_images).join() {
+      dimg.alpha = 1f32;
     }
   }
 }

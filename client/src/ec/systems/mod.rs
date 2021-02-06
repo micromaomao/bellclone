@@ -6,3 +6,4 @@ pub mod collision_star;
 pub mod draw_numbers;
 pub mod players;
 pub mod effects;
+pub mod restart;

@@ -189,6 +189,7 @@ fn build_game_dispatch<'a, 'b>() -> Dispatcher<'a, 'b> {
     &["our_player_system"],
   );
   game_dispatch.add(systems::effects::FadeOutSystem, "fade_out_system", &[]);
+  game_dispatch.add(systems::restart::RestartSystem::default(), "restart_system", &[]);
   game_dispatch.build()
 }
 

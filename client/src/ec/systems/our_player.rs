@@ -109,7 +109,7 @@ impl<'a> System<'a> for OurPlayerSystem {
           for (ent, bell, tr, _) in (&ents, &bells, &trs, &jumpable_bell_markers).join() {
             let pos = tr.position();
             let size = bell.size;
-            if (player_pos - pos).length_squared() < size {
+            if (player_pos - pos).length_squared() < size * 0.5f32 {
               let mut v = vel.0.y;
               if v < 0f32 {
                 v = 0f32;
