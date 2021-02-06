@@ -1,10 +1,35 @@
 use game_core::ec::components::transform::WorldSpaceTransform;
-use golem::{ElementBuffer, UniformValue, VertexBuffer};
+use golem::{Context, ElementBuffer, UniformValue, VertexBuffer};
 use specs::{Join, Read, ReadStorage, System};
 
 use crate::{ec::components::debug::DebugRect, render::DrawingCtx};
 
-pub struct DrawDebug;
+pub struct DrawDebug {
+  buf: VertexBuffer,
+  ele: ElementBuffer,
+}
+
+impl DrawDebug {
+  pub fn new(glctx: &Context) -> Result<Self, golem::GolemError> {
+    let mut buf = VertexBuffer::new(glctx).unwrap();
+    buf.set_data(&[
+      -1f32, -1f32, // bl
+      1f32, -1f32, // br
+      1f32, 1f32, // tr
+      -1f32, 1f32, // tl
+    ]);
+    let mut ele = ElementBuffer::new(glctx).unwrap();
+    ele.set_data(&[
+      0, 1, 1, 2, 2, 3, 3, 0, // box
+      3, 1, // \
+      0, 2, // /
+    ]);
+    Ok(Self {
+      buf, ele
+    })
+  }
+}
+
 impl<'a> System<'a> for DrawDebug {
   type SystemData = (
     Read<'a, DrawingCtx>,
@@ -16,26 +41,13 @@ impl<'a> System<'a> for DrawDebug {
     let mut shaders = dctx.shaders.borrow_mut();
     let prog = &mut shaders.debug_rect;
     prog.bind();
-    let mut buf = VertexBuffer::new(dctx.glctx).unwrap();
-    buf.set_data(&[
-      -1f32, -1f32, // bl
-      1f32, -1f32, // br
-      1f32, 1f32, // tr
-      -1f32, 1f32, // tl
-    ]);
-    let mut ele = ElementBuffer::new(dctx.glctx).unwrap();
-    ele.set_data(&[
-      0, 1, 1, 2, 2, 3, 3, 0, // box
-      3, 1, // \
-      0, 2, // /
-    ]);
     prog
       .set_uniform(
         "uViewMat",
         UniformValue::Matrix4(dctx.viewport.view_matrix.to_cols_array()),
       )
       .unwrap();
-    prog.prepare_draw(&buf, &ele).unwrap();
+    prog.prepare_draw(&self.buf, &self.ele).unwrap();
     for (rect, tr) in (&debug_rects, &transforms).join() {
       prog
         .set_uniform(

@@ -5,7 +5,7 @@ use specs::{Dispatcher, DispatcherBuilder};
 use specs::{World, WorldExt};
 use user_input::PointerState;
 
-use crate::{render::DrawingCtx, webapi_utils::perf_now_f64};
+use crate::{global, render::{DrawingCtx, GraphicsCtx}, webapi_utils::perf_now_f64};
 
 pub mod components;
 pub mod systems;
@@ -21,33 +21,17 @@ pub struct EcCtx {
 }
 
 impl EcCtx {
-  pub fn new() -> Self {
+  pub fn new(graphics: &GraphicsCtx) -> Self {
     let mut world = World::new();
     register_common_components(&mut world);
     register_client_components(&mut world);
     world.insert(DeltaTime::default());
     world.insert(PointerState::default());
-    let mut game_dispatch = DispatcherBuilder::new();
-    register_common_systems(&mut game_dispatch);
-    game_dispatch.add(
-      systems::our_player::OurPlayerSystem,
-      "our_player_system",
-      &[],
-    );
-    game_dispatch.add(
-      systems::bell::BellSystem,
-      "bell_system",
-      &["our_player_system"],
-    );
-    game_dispatch.add(systems::collision_star::CollisionStarSystem, "collision_star_system", &["bell_system"]);
-    let mut render_dispatch = DispatcherBuilder::new();
-    render_dispatch.add_thread_local(systems::draw_debug::DrawDebug);
-    render_dispatch.add_thread_local(systems::draw_image::DrawImageSystem);
     world.maintain();
     EcCtx {
       world,
-      game_dispatch: game_dispatch.build(),
-      render_dispatch: render_dispatch.build(),
+      game_dispatch: build_game_dispatch(),
+      render_dispatch: build_render_dispatch(graphics),
       last_time: perf_now_f64(),
     }
   }
@@ -87,4 +71,33 @@ fn register_client_components(w: &mut World) {
   w.register::<components::bell::OurJumpableBell>();
   w.register::<components::collision_star::CollisionStar>();
   w.register::<components::DrawImage>();
+}
+
+fn build_game_dispatch<'a, 'b>() -> Dispatcher<'a, 'b> {
+  let mut game_dispatch = DispatcherBuilder::new();
+  register_common_systems(&mut game_dispatch);
+  game_dispatch.add(
+    systems::our_player::OurPlayerSystem,
+    "our_player_system",
+    &[],
+  );
+  game_dispatch.add(
+    systems::bell::BellSystem,
+    "bell_system",
+    &["our_player_system"],
+  );
+  game_dispatch.add(
+    systems::collision_star::CollisionStarSystem,
+    "collision_star_system",
+    &["bell_system"],
+  );
+  game_dispatch.build()
+}
+
+fn build_render_dispatch<'a, 'b>(graphics: &GraphicsCtx) -> Dispatcher<'a, 'b> {
+  let mut render_dispatch = DispatcherBuilder::new();
+  let glctx = &graphics.glctx;
+  render_dispatch.add_thread_local(systems::draw_debug::DrawDebug::new(glctx).unwrap());
+  render_dispatch.add_thread_local(systems::draw_image::DrawImageSystem::new(glctx).unwrap());
+  render_dispatch.build()
 }

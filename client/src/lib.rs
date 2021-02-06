@@ -32,7 +32,7 @@ pub fn client_init() {
         panic!("Error initalizing graphics: {}", e)
       }
     };
-    let ec = RefCell::new(EcCtx::new());
+    let ec = RefCell::new(EcCtx::new(&graphics));
     let wm = RefCell::new(WorldManager::new(&mut *ec.borrow_mut()));
     global::init_ctx(Context {
       graphics,
