@@ -3,7 +3,7 @@ use std::{cell::RefCell, unreachable};
 
 use ec::EcCtx;
 use global::Context;
-use render::GraphicsCtx;
+use render::{GraphicsCtx, ViewportSize};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::{closure::Closure, prelude::*};
 use web_sys::{AddEventListenerOptions, MouseEvent, TouchEvent};
@@ -75,18 +75,20 @@ pub fn client_init() {
 }
 
 fn handle_resize() {
-  let mut gr = &global::get_ref().graphics;
+  let gr = &global::get_ref().graphics;
   let window = web_sys::window().unwrap();
   let width = window.inner_width().unwrap().as_f64().unwrap();
   let height = window.inner_height().unwrap().as_f64().unwrap();
-  let real_pixel_width = width * window.device_pixel_ratio();
-  let real_pixel_height = height * window.device_pixel_ratio();
-  gr.resize(
-    width as u32,
-    height as u32,
-    real_pixel_width as u32,
-    real_pixel_height as u32,
-  );
+  let real_width = width * window.device_pixel_ratio();
+  let real_height = height * window.device_pixel_ratio();
+  gr.resize(ViewportSize {
+    width: width as u32,
+    height: height as u32,
+    real_width: real_width as u32,
+    real_height: real_height as u32,
+  });
+  let mut ec = global::get_ref().ec.borrow_mut();
+  ec.resize(gr);
 }
 
 fn handle_resize_evt(_evt: JsValue) {
@@ -167,7 +169,7 @@ fn handle_redraw() {
     let mut wm = global.world_manager.borrow_mut();
     wm.update(&mut ec);
     let size = *gr.viewport_size.borrow();
-    viewport = wm.calculate_camera(&ec, size.0, size.1);
+    viewport = wm.calculate_camera(&ec, size);
   }
   ec.pointer_state_mut().recalculate_raycast(&viewport);
   let dctx = gr.prepare_render(viewport);

@@ -1,15 +1,28 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+  num::NonZeroU32,
+  ops::{Deref, DerefMut},
+};
 
 use game_core::ec::{register_common_components, register_common_systems, DeltaTime};
+use golem::{ElementBuffer, GeometryMode, Surface, Texture, UniformValue, VertexBuffer};
 use specs::{Dispatcher, DispatcherBuilder};
 use specs::{World, WorldExt};
 use user_input::PointerState;
 
-use crate::{global, render::{DrawingCtx, GraphicsCtx}, webapi_utils::perf_now_f64};
+use crate::{
+  global,
+  render::{view::ViewportInfo, DrawingCtx, GraphicsCtx, ViewportSize},
+  webapi_utils::perf_now_f64,
+};
 
 pub mod components;
 pub mod systems;
 pub mod user_input;
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct BlurFlags {
+  pub motion_blur_dy: f32,
+}
 
 pub const GAME_SPEED: f32 = 1f32;
 
@@ -18,6 +31,9 @@ pub struct EcCtx {
   game_dispatch: Dispatcher<'static, 'static>,
   render_dispatch: Dispatcher<'static, 'static>,
   last_time: f64,
+  render_surface: Surface,
+  postprocess_quad_buf: VertexBuffer,
+  postprocess_quad_ele: ElementBuffer,
 }
 
 impl EcCtx {
@@ -27,12 +43,30 @@ impl EcCtx {
     register_client_components(&mut world);
     world.insert(DeltaTime::default());
     world.insert(PointerState::default());
+    world.insert(BlurFlags::default());
     world.maintain();
+    let glctx = &graphics.glctx;
+    let mut buf = VertexBuffer::new(glctx).unwrap();
+    buf.set_data(&[
+      -1f32, -1f32, // bl
+      1f32, -1f32, // br
+      1f32, 1f32, // tr
+      -1f32, 1f32, // tl
+    ]);
+    let mut ele = ElementBuffer::new(glctx).unwrap();
+    ele.set_data(&[
+      1, 2, 0, // /|
+      3, // |/
+    ]);
     EcCtx {
       world,
       game_dispatch: build_game_dispatch(),
       render_dispatch: build_render_dispatch(graphics),
       last_time: perf_now_f64(),
+      render_surface: Surface::new(&graphics.glctx, Texture::new(&graphics.glctx).unwrap())
+        .unwrap(),
+      postprocess_quad_buf: buf,
+      postprocess_quad_ele: ele,
     }
   }
 
@@ -53,10 +87,65 @@ impl EcCtx {
     self.world.maintain();
   }
 
+  pub fn resize(&mut self, gctx: &GraphicsCtx) {
+    let ViewportSize {
+      real_width,
+      real_height,
+      ..
+    } = *gctx.viewport_size.borrow();
+    self.render_surface.bind();
+    let mut tex = self.render_surface.take_texture().unwrap();
+    tex.set_image(None, real_width, real_height, golem::ColorFormat::RGB);
+    self.render_surface.put_texture(tex);
+    Surface::unbind(&gctx.glctx);
+  }
+
   pub fn render(&mut self, dctx: DrawingCtx) {
+    let glctx = dctx.glctx;
+    let ViewportSize {
+      real_width,
+      real_height,
+      ..
+    } = dctx.viewport.size;
+    self.render_surface.bind();
+    glctx.set_viewport(0, 0, real_width, real_height);
+    glctx.set_clear_color(
+      (51f32 / 255f32).powf(2.2f32),
+      0f32,
+      (102f32 / 255f32).powf(2.2f32),
+      1f32,
+    );
+    glctx.clear();
     self.world.insert(dctx);
     self.render_dispatch.dispatch(&self.world);
     self.world.remove::<DrawingCtx>();
+    Surface::unbind(glctx);
+    let tex = unsafe { self.render_surface.borrow_texture().unwrap() };
+    let mut shaders = dctx.shaders.borrow_mut();
+    let prog = &mut shaders.postprocess;
+    prog.bind();
+    tex.set_active(NonZeroU32::new(1).unwrap());
+    prog.set_uniform("tex", UniformValue::Int(1)).unwrap();
+    let blur_flags = self.world.read_resource::<BlurFlags>();
+    let view_height = dctx.viewport.tr.y - dctx.viewport.bl.y;
+    let dt = self.world.read_resource::<DeltaTime>().as_secs_f32();
+    prog
+      .set_uniform(
+        "mb_dist",
+        UniformValue::Float(blur_flags.motion_blur_dy * dt / view_height / 2f32),
+      )
+      .unwrap();
+    drop(blur_flags);
+    unsafe {
+      prog
+        .draw(
+          &self.postprocess_quad_buf,
+          &self.postprocess_quad_ele,
+          0..4,
+          GeometryMode::TriangleStrip,
+        )
+        .unwrap();
+    }
     self.pointer_state_mut().frame();
   }
 

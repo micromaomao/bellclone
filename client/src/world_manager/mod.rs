@@ -1,14 +1,10 @@
 use std::collections::HashMap;
 
-use crate::{
-  ec::components::{
+use crate::{ec::{BlurFlags, components::{
     bell::OurJumpableBell,
     player::{OurPlayer, OurPlayerState},
     DrawImage,
-  },
-  global,
-  render::view::view_matrix,
-};
+  }}, global, render::{view::view_matrix, ViewportSize}};
 use crate::{ec::EcCtx, render::view::ViewportInfo};
 use game_core::{
   ec::{
@@ -91,11 +87,11 @@ impl WorldManager {
     }
   }
 
-  pub fn calculate_camera(&mut self, ec: &EcCtx, width: u32, height: u32) -> ViewportInfo {
+  pub fn calculate_camera(&mut self, ec: &EcCtx, viewport_size: ViewportSize) -> ViewportInfo {
     let w = &ec.world;
     if self.me.is_none() {
       self.camera_y = CAMERA_INIT_Y;
-      return view_matrix(width, height, self.camera_y);
+      return view_matrix(viewport_size, self.camera_y);
     }
     let me = self.me.unwrap();
     let our_player_storage = w.read_storage::<OurPlayer>();
@@ -108,8 +104,11 @@ impl WorldManager {
       .position()
       .y;
     let player_v = w.read_storage::<Velocity>().get(me).unwrap().0.y;
+    let mut blur_flags = w.write_resource::<BlurFlags>();
+    blur_flags.motion_blur_dy = 0f32;
     if player_state.state == OurPlayerState::Falling
       && player_y < {
+        let ViewportSize { width, height, .. } = viewport_size;
         // calculate threshold y before camera cut to ground.
         let mut visible_height = STAGE_MIN_HEIGHT;
         if height > width {
@@ -125,14 +124,17 @@ impl WorldManager {
         OurPlayerState::NotStarted => CAMERA_INIT_Y,
       };
       let dt = ec.world.read_resource::<DeltaTime>().as_secs_f32();
-      if target_y - cam_y > CAMERA_TARGET_EPSILON {
-        cam_y += dt * CAMERA_SPEED_MUL * (target_y - cam_y);
-      } else if cam_y - target_y > CAMERA_TARGET_EPSILON {
-        cam_y -= dt * CAMERA_SPEED_MUL * (cam_y - target_y);
+      let diff = target_y - cam_y;
+      if diff.abs() > CAMERA_TARGET_EPSILON {
+        let v = CAMERA_SPEED_MUL * diff;
+        cam_y += dt * v;
+        if v < -5f32 {
+          blur_flags.motion_blur_dy = -v;
+        }
       }
     }
     // cam_y += (player_v * 0.5).min(CAMERA_MAX_SPEED) * dt;
     self.camera_y = cam_y;
-    view_matrix(width, height, cam_y)
+    view_matrix(viewport_size, cam_y)
   }
 }

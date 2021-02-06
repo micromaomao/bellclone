@@ -1,20 +1,21 @@
 use game_core::{STAGE_MAX_X, STAGE_MIN_HEIGHT, STAGE_MIN_X, STAGE_WIDTH};
 use glam::f32::*;
 
-#[derive(Debug, Clone, Default)]
+use super::ViewportSize;
+
+#[derive(Debug, Clone, Copy, Default)]
 pub struct ViewportInfo {
   pub view_matrix: Mat4,
   pub tr: Vec2,
   pub bl: Vec2,
-  pub width: u32,
-  pub height: u32,
+  pub size: ViewportSize,
 }
 
 impl ViewportInfo {
   pub fn raycast(&self, pixel_x: u32, pixel_y: u32) -> Vec2 {
     Vec2::new(
-      self.bl.x + pixel_x as f32 / self.width as f32 * (self.tr.x - self.bl.x),
-      self.bl.y + pixel_y as f32 / self.height as f32 * (self.tr.y - self.bl.y),
+      self.bl.x + pixel_x as f32 / self.size.width as f32 * (self.tr.x - self.bl.x),
+      self.bl.y + pixel_y as f32 / self.size.height as f32 * (self.tr.y - self.bl.y),
     )
   }
 }
@@ -41,7 +42,8 @@ pub fn affine_2d_to_3d(transform: Mat3) -> Mat4 {
   .transpose()
 }
 
-pub fn view_matrix(width: u32, height: u32, camera_y: f32) -> ViewportInfo {
+pub fn view_matrix(viewport_size: ViewportSize, camera_y: f32) -> ViewportInfo {
+  let ViewportSize { width, height, .. } = viewport_size;
   let aspect_ratio = (width as f32) / (height as f32);
   let mut bl = Vec2::new(STAGE_MIN_X, camera_y);
   let mut tr = Vec2::new(STAGE_MAX_X, camera_y + STAGE_MIN_HEIGHT);
@@ -74,7 +76,6 @@ pub fn view_matrix(width: u32, height: u32, camera_y: f32) -> ViewportInfo {
     view_matrix,
     tr,
     bl,
-    width,
-    height,
+    size: viewport_size,
   }
 }

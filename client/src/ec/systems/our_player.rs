@@ -5,7 +5,7 @@ use game_core::ec::{
   DeltaTime,
 };
 use glam::f32::*;
-use specs::{Entities, Entity, Join, Read, ReadStorage, System, WriteStorage};
+use specs::{Entities, Entity, Join, Read, ReadStorage, System, Write, WriteStorage};
 
 use crate::ec::{
   components::{
@@ -15,6 +15,7 @@ use crate::ec::{
     DrawImage,
   },
   user_input::PointerState,
+  BlurFlags,
 };
 
 use super::collision_star;

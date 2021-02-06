@@ -14,15 +14,23 @@ pub mod image_texture;
 pub mod shader_program;
 pub mod view;
 
+#[derive(Debug, Default, Clone, Copy)]
+pub struct ViewportSize {
+  pub width: u32,
+  pub height: u32,
+  pub real_width: u32,
+  pub real_height: u32
+}
+
 pub struct GraphicsCtx {
   pub glctx: golem::Context,
   pub canvas: HtmlCanvasElement,
-  pub viewport_size: RefCell<(u32, u32)>,
+  pub viewport_size: RefCell<ViewportSize>,
   pub shaders: RefCell<Shaders>,
   pub images: image_texture::Images,
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct DrawingCtx {
   pub glctx: &'static golem::Context,
   pub viewport: ViewportInfo,
@@ -66,16 +74,17 @@ impl GraphicsCtx {
     Ok(GraphicsCtx {
       glctx,
       canvas: ele,
-      viewport_size: RefCell::new((0u32, 0u32)),
+      viewport_size: RefCell::new(ViewportSize::default()),
       shaders: RefCell::new(shaders),
       images,
     })
   }
 
-  pub fn resize(&self, width: u32, height: u32, real_width: u32, real_height: u32) {
+  pub fn resize(&self, new_size: ViewportSize) {
+    self.viewport_size.replace(new_size);
+    let ViewportSize { real_width, real_height, .. } = new_size;
     self.canvas.set_width(real_width);
     self.canvas.set_height(real_height);
-    self.viewport_size.replace((width, height));
     self.glctx.set_viewport(0, 0, real_width, real_height);
   }
 
@@ -85,8 +94,6 @@ impl GraphicsCtx {
     glctx.set_blend_mode(Some(BlendMode::default()));
     glctx.set_depth_test_mode(None);
     // glctx.set_clear_color(0.9765f32, 0.9686f32, 0.9255f32, 1f32);
-    glctx.set_clear_color(51f32 / 255f32, 0f32, 102f32 / 255f32, 1f32);
-    glctx.clear();
 
     DrawingCtx {
       glctx,
