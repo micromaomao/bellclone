@@ -77,9 +77,16 @@ pub fn client_init() {
 fn handle_resize() {
   let mut gr = &global::get_ref().graphics;
   let window = web_sys::window().unwrap();
-  let width = window.inner_width().unwrap().as_f64().unwrap() as u32;
-  let height = window.inner_height().unwrap().as_f64().unwrap() as u32;
-  gr.resize(width, height);
+  let width = window.inner_width().unwrap().as_f64().unwrap();
+  let height = window.inner_height().unwrap().as_f64().unwrap();
+  let real_pixel_width = width * window.device_pixel_ratio();
+  let real_pixel_height = height * window.device_pixel_ratio();
+  gr.resize(
+    width as u32,
+    height as u32,
+    real_pixel_width as u32,
+    real_pixel_height as u32,
+  );
 }
 
 fn handle_resize_evt(_evt: JsValue) {

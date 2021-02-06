@@ -72,12 +72,11 @@ impl GraphicsCtx {
     })
   }
 
-  pub fn resize(&self, width: u32, height: u32) {
-    let window = web_sys::window().unwrap();
-    self.canvas.set_width(width);
-    self.canvas.set_height(height);
+  pub fn resize(&self, width: u32, height: u32, real_width: u32, real_height: u32) {
+    self.canvas.set_width(real_width);
+    self.canvas.set_height(real_height);
     self.viewport_size.replace((width, height));
-    self.glctx.set_viewport(0, 0, width, height);
+    self.glctx.set_viewport(0, 0, real_width, real_height);
   }
 
   pub fn prepare_render(&'static self, viewport: ViewportInfo) -> DrawingCtx {
