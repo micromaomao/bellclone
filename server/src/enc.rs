@@ -2,7 +2,7 @@ use game_core::ec::components::{
   physics::Velocity, player::PlayerComponent, transform::WorldSpaceTransform, EntityId,
 };
 use protocol::{flatbuffers::{FlatBufferBuilder, WIPOffset}, servermsg_generated::{PlayerUpdate, PlayerUpdateBuilder, ServerMessage, ServerMessageBuilder, ServerMessageInner}};
-use specs::ReadStorage;
+
 
 pub fn encode_player_update<'a>(
   fbb: &mut FlatBufferBuilder<'a>,

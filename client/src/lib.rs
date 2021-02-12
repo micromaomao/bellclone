@@ -17,7 +17,7 @@ mod webapi_utils;
 mod websocket;
 mod world_manager;
 
-pub const DEFAULT_GAME_SERVER: &'static str = "ws://172.17.0.2:8080";
+pub const DEFAULT_GAME_SERVER: &str = "ws://172.17.0.2:8080";
 
 #[macro_export]
 macro_rules! log {
@@ -155,7 +155,7 @@ fn handle_pointer_down(evt: JsValue) {
   }
 }
 
-fn handle_pointer_up(evt: JsValue) {
+fn handle_pointer_up(_evt: JsValue) {
   let global = global::get_ref();
   let mut ec = global.ec.borrow_mut();
   ec.pointer_state_mut().up();

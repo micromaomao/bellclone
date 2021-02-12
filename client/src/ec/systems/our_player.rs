@@ -5,7 +5,7 @@ use game_core::ec::{
   DeltaTime,
 };
 use glam::f32::*;
-use specs::{Entities, Entity, Join, Read, ReadStorage, System, Write, WriteStorage};
+use specs::{Entities, Entity, Join, Read, ReadStorage, System, WriteStorage};
 
 use crate::ec::{
   components::{
@@ -17,7 +17,6 @@ use crate::ec::{
     DrawImage,
   },
   user_input::PointerState,
-  BlurFlags,
 };
 
 use super::collision_star;
@@ -68,7 +67,6 @@ impl<'a> System<'a> for OurPlayerSystem {
       mut dns,
     ): Self::SystemData,
   ) {
-    let dt = dt.as_secs_f32();
     for (p_entid, p, mut our_p, vel) in (&ents, &mut players, &mut our_players, &mut vels).join() {
       let tr = trs.get(p_entid).unwrap();
       let player_pos = tr.position();
@@ -136,10 +134,8 @@ impl<'a> System<'a> for OurPlayerSystem {
             fade_outs.insert(sg, FadeOut::new(0.6f32)).unwrap();
             dns.insert(sg, dn).unwrap();
             trs.insert(sg, WorldSpaceTransform::from_pos(pos + Vec3::unit_y() * 0.2f32).add(Mat4::from_scale(Vec3::new(0.2f32, 0.2f32, 1f32)))).unwrap();
-          } else {
-            if vel.0.y < -FALLING_THRESHOLD_SPEED {
-              our_p.state = OurPlayerState::Falling;
-            }
+          } else if vel.0.y < -FALLING_THRESHOLD_SPEED {
+            our_p.state = OurPlayerState::Falling;
           }
         }
       }

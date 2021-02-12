@@ -1,6 +1,6 @@
 use std::{
   future::Future,
-  mem::{self, forget},
+  mem::{self},
   net::SocketAddr,
   ops::{Deref, DerefMut},
   println,
@@ -24,7 +24,7 @@ use protocol::servermsg_generated::{
   PlayerUpdateBuilder, ServerMessage, ServerMessageBuilder, ServerMessageInner,
   ServerMessageInnerUnionTableOffset,
 };
-use specs::{Builder, Dispatcher, DispatcherBuilder, RunNow, World, WorldExt};
+use specs::{Builder, Dispatcher, DispatcherBuilder, World, WorldExt};
 use std::error::Error;
 use thread::sleep;
 use tokio::{
@@ -164,7 +164,7 @@ async fn accept_ws(
   }
   server_ctx.broadcast(fbb.finished_data().to_vec());
   let mut delay_fut = interval(Duration::from_millis(100));
-  let mut broadcast_sub = server_ctx.subscribe_broadcast();
+  let broadcast_sub = server_ctx.subscribe_broadcast();
   let mut broadcast_sub = BroadcastStream::new(broadcast_sub);
   loop {
     fbb.reset();
@@ -177,7 +177,7 @@ async fn accept_ws(
       _ = delay_fut.tick().fuse() => {
         // todo
       },
-      data = ws.next().fuse() => {
+      _data = ws.next().fuse() => {
         // todo
       }
     }

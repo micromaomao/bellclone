@@ -13,7 +13,7 @@ use crate::{
   global,
   render::{view::view_matrix, ViewportSize},
 };
-use game_core::{STAGE_MIN_HEIGHT, STAGE_WIDTH, dec::parse_entity_id, ec::{DeltaTime, components::{EntityId, bell::BellComponent, physics::Velocity, player::build_player, transform::WorldSpaceTransform}}, gen::BellGenContext};
+use game_core::{STAGE_MIN_HEIGHT, STAGE_WIDTH, dec::parse_entity_id, ec::{DeltaTime, components::{EntityId, bell::BellComponent, physics::Velocity, transform::WorldSpaceTransform}}, gen::BellGenContext};
 use glam::f32::*;
 use protocol::servermsg_generated::{ServerMessage, ServerMessageInner};
 use specs::{Builder, Entity, EntityBuilder, Join, WorldExt};
@@ -90,7 +90,7 @@ impl WorldManager {
     self.state = GameState::Offline;
   }
 
-  pub fn show_connection_error(&mut self, ec: &mut EcCtx) {
+  pub fn show_connection_error(&mut self, _ec: &mut EcCtx) {
     // todo
   }
 
@@ -225,7 +225,7 @@ impl WorldManager {
           .unwrap();
       }
       ServerMessageInner::PlayerDelete => {
-        let msg = msg.msg_as_player_delete().unwrap();
+        let _msg = msg.msg_as_player_delete().unwrap();
       }
     }
   }

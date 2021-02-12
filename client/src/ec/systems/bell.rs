@@ -1,7 +1,7 @@
 use game_core::ec::components::bell::BellComponent;
 use specs::{Join, ReadStorage, System, WriteStorage};
 
-use crate::ec::components::{bell::OurJumpableBell, player::OurPlayer, DrawImage};
+use crate::ec::components::{bell::OurJumpableBell, DrawImage};
 
 pub struct BellSystem;
 

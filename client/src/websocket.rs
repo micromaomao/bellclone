@@ -1,14 +1,14 @@
 use std::cell::RefCell;
 
-use js_sys::{ArrayBuffer, Uint8Array};
+use js_sys::{Uint8Array};
 use protocol::servermsg_generated;
-use servermsg_generated::ServerMessageInner;
+
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{BinaryType, MessageEvent, WebSocket};
 
 use crate::global;
-use crate::log;
+
 
 pub struct SocketContext {
   connection_id: RefCell<u32>,
