@@ -1,0 +1,23 @@
+include "base.fbs";
+
+union ServerMessageInner {
+  PlayerUpdate,
+  PlayerDelete,
+}
+
+table ServerMessage {
+  msg: ServerMessageInner;
+}
+
+table PlayerUpdate {
+  id: Uuid;
+  pos: Vec2;
+  vel: Vec2;
+  score: Score;
+}
+
+table PlayerDelete {
+  id: Uuid;
+}
+
+root_type ServerMessage;

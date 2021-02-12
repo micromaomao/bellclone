@@ -1,0 +1,15 @@
+struct Vec2 {
+  x: float;
+  y: float;
+}
+
+struct Uuid {
+  // id: [ubyte:16];
+  lower: uint64;
+  upper: uint64;
+}
+
+struct Score {
+  lower: uint64;
+  upper: uint64;
+}

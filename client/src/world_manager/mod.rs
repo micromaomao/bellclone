@@ -1,31 +1,33 @@
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 
-use crate::{ec::{BlurFlags, components::{
-    bell::OurJumpableBell,
-    player::{OurPlayer, OurPlayerState},
-    DrawImage,
-  }}, global, render::{view::view_matrix, ViewportSize}};
 use crate::{ec::EcCtx, render::view::ViewportInfo};
-use game_core::{
+use crate::{
   ec::{
-    components::{physics::Velocity, transform::WorldSpaceTransform, EntityId},
-    DeltaTime,
+    components::{
+      bell::OurJumpableBell,
+      player::{OurPlayer, OurPlayerState},
+      DrawImage,
+    },
+    BlurFlags,
   },
-  gen::BellGenContext,
-  STAGE_MIN_HEIGHT, STAGE_WIDTH,
+  global,
+  render::{view::view_matrix, ViewportSize},
 };
+use game_core::{STAGE_MIN_HEIGHT, STAGE_WIDTH, dec::parse_entity_id, ec::{DeltaTime, components::{EntityId, bell::BellComponent, physics::Velocity, player::build_player, transform::WorldSpaceTransform}}, gen::BellGenContext};
 use glam::f32::*;
-use specs::{Builder, Entity, EntityBuilder, WorldExt};
+use protocol::servermsg_generated::{ServerMessage, ServerMessageInner};
+use specs::{Builder, Entity, EntityBuilder, Join, WorldExt};
 pub mod player;
-use player::{create_background, create_player_local};
+use player::{create_background, create_our_player, create_remote_player};
 
 pub struct WorldManager {
   me: Option<Entity>,
   background: Option<Entity>,
   camera_y: f32,
   /// only used for tracking server bells
-  bells: HashMap<EntityId, Entity>,
+  entityid_map: HashMap<EntityId, Entity>,
   local_bell_gen: Option<BellGenContext>,
+  state: GameState,
 }
 
 pub const CAMERA_OFFSET_Y: f32 = -4f32;
@@ -33,6 +35,13 @@ pub const CAMERA_INIT_Y: f32 = -2f32;
 pub const CAMERA_TARGET_EPSILON: f32 = 0.1f32;
 pub const CAMERA_SPEED_MUL: f32 = 4f32;
 pub const CAMERA_SWITCH_TO_GROUND_EARLY_PERIOD: f32 = 0.5f32; // secs
+
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
+pub enum GameState {
+  Connecting,
+  Online,
+  Offline,
+}
 
 impl WorldManager {
   pub fn new(ec: &mut EcCtx) -> Self {
@@ -42,23 +51,69 @@ impl WorldManager {
       me: None,
       background: None,
       camera_y: CAMERA_INIT_Y,
-      bells: HashMap::new(),
+      entityid_map: HashMap::new(),
       local_bell_gen: None,
+      state: GameState::Connecting,
     }
   }
 
   pub fn init_common(&mut self, ec: &mut EcCtx) {
-    self.background = Some(create_background(ec));
+    if self.background.is_none() {
+      self.background = Some(create_background(ec));
+    }
   }
 
   pub fn init_offline(&mut self, ec: &mut EcCtx) {
     self.init_common(ec);
-    self.me = Some(create_player_local(ec));
-    self.local_bell_gen = Some(BellGenContext::new());
+    if self.me.is_none() {
+      self.me = Some(create_our_player(ec));
+    } // otherwise we can just keep the current player position and "switch seamlessly" from online to offline.
+    let mut bell_gen = BellGenContext::new();
+    let mut highest_pos: Option<Vec2> = None;
+    for (_, bell_pos) in (
+      &ec.world.read_storage::<BellComponent>(),
+      &ec.world.read_storage::<WorldSpaceTransform>(),
+    )
+      .join()
+    {
+      let p = bell_pos.position();
+      let this_pos = Vec2::new(p.x, p.y);
+      if highest_pos.is_none() || highest_pos.unwrap().y < this_pos.y {
+        highest_pos = Some(this_pos);
+      }
+    }
+    if let Some(pos) = highest_pos {
+      bell_gen.set_last_point(pos);
+    }
+    ec.world.maintain();
+    self.local_bell_gen = Some(bell_gen);
+    self.state = GameState::Offline;
+  }
+
+  pub fn show_connection_error(&mut self, ec: &mut EcCtx) {
+    // todo
+  }
+
+  pub fn init_online(&mut self, ec: &mut EcCtx) {
+    ec.world.delete_all();
+    self.background = None;
+    self.me = None;
+    self.local_bell_gen = None;
+    self.init_common(ec);
+    self.me = Some(create_our_player(ec));
+    self.state = GameState::Online;
   }
 
   pub fn update(&mut self, ec: &mut EcCtx) {
-    self.offline_update(ec);
+    match self.state {
+      GameState::Connecting => {}
+      GameState::Offline => {
+        self.offline_update(ec);
+      }
+      GameState::Online => {
+        // todo
+      }
+    }
   }
 
   fn attach_bell_client_commponent(ent: EntityBuilder) -> EntityBuilder {
@@ -136,5 +191,42 @@ impl WorldManager {
     // cam_y += (player_v * 0.5).min(CAMERA_MAX_SPEED) * dt;
     self.camera_y = cam_y;
     view_matrix(viewport_size, cam_y)
+  }
+
+  pub fn process_msg(&mut self, ec: &mut EcCtx, msg: ServerMessage<'_>) {
+    if self.state != GameState::Online {
+      return;
+    }
+    match msg.msg_type() {
+      ServerMessageInner::NONE => unreachable!(),
+      ServerMessageInner::PlayerUpdate => {
+        let msg = msg.msg_as_player_update().unwrap();
+        let player_id = parse_entity_id(msg.id().unwrap());
+        let pos = msg.pos().unwrap();
+        let vel = msg.vel().unwrap();
+        let ent = match self.entityid_map.entry(player_id) {
+          Entry::Occupied(ent) => *ent.get(),
+          Entry::Vacant(slot) => {
+            let new_ent = create_remote_player(ec);
+            slot.insert(new_ent);
+            new_ent
+          }
+        };
+        ec.world
+          .write_storage::<WorldSpaceTransform>()
+          .insert(
+            ent,
+            WorldSpaceTransform::from_pos(Vec3::new(pos.x(), pos.y(), 0f32)),
+          )
+          .unwrap();
+        ec.world
+          .write_storage::<Velocity>()
+          .insert(ent, Velocity(Vec2::new(vel.x(), vel.y())))
+          .unwrap();
+      }
+      ServerMessageInner::PlayerDelete => {
+        let msg = msg.msg_as_player_delete().unwrap();
+      }
+    }
   }
 }

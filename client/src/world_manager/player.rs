@@ -13,7 +13,17 @@ use game_core::ec::components::{player::build_player, transform::WorldSpaceTrans
 use glam::f32::*;
 use specs::{Builder, Entity, WorldExt};
 
-pub fn create_player_local(ec: &mut EcCtx) -> Entity {
+pub fn create_remote_player(ec: &mut EcCtx) -> Entity {
+  build_player(&mut ec.world)
+    .with(DrawImage {
+      texture: &global::get_ref().graphics.images.crab,
+      size: Vec2::new(0.6f32, 0.6f32),
+      alpha: 1f32,
+    })
+    .build()
+}
+
+pub fn create_our_player(ec: &mut EcCtx) -> Entity {
   build_player(&mut ec.world)
     .with(OurPlayer {
       state: OurPlayerState::NotStarted,

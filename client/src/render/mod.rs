@@ -11,16 +11,16 @@ use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{HtmlCanvasElement, WebGlRenderingContext};
 
 pub mod image_texture;
+pub mod numbers;
 pub mod shader_program;
 pub mod view;
-pub mod numbers;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ViewportSize {
   pub width: u32,
   pub height: u32,
   pub real_width: u32,
-  pub real_height: u32
+  pub real_height: u32,
 }
 
 pub struct GraphicsCtx {
@@ -83,7 +83,11 @@ impl GraphicsCtx {
 
   pub fn resize(&self, new_size: ViewportSize) {
     self.viewport_size.replace(new_size);
-    let ViewportSize { real_width, real_height, .. } = new_size;
+    let ViewportSize {
+      real_width,
+      real_height,
+      ..
+    } = new_size;
     self.canvas.set_width(real_width);
     self.canvas.set_height(real_height);
     self.glctx.set_viewport(0, 0, real_width, real_height);

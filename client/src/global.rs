@@ -1,10 +1,11 @@
-use crate::{ec::EcCtx, render::GraphicsCtx, world_manager::WorldManager};
+use crate::{ec::EcCtx, render::GraphicsCtx, websocket::SocketContext, world_manager::WorldManager};
 use std::{cell::RefCell, mem::MaybeUninit};
 
 pub struct Context {
   pub graphics: GraphicsCtx,
   pub ec: RefCell<EcCtx>,
   pub world_manager: RefCell<WorldManager>,
+  pub socket_context: SocketContext,
 }
 pub static mut game_ctx: MaybeUninit<Context> = MaybeUninit::uninit();
 pub static mut initialized: bool = false;

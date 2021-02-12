@@ -9,7 +9,7 @@ pub mod physics;
 pub mod bell;
 
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
-pub struct EntityId(Uuid);
+pub struct EntityId(pub Uuid);
 
 impl Component for EntityId {
   type Storage = DenseVecStorage<Self>;

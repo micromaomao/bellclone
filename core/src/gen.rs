@@ -83,4 +83,8 @@ impl BellGenContext {
       self.gen(world, &mut attach);
     }
   }
+
+  pub fn set_last_point(&mut self, point: Vec2) {
+    self.last_point = point;
+  }
 }

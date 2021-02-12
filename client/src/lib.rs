@@ -7,13 +7,17 @@ use render::{GraphicsCtx, ViewportSize};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::{closure::Closure, prelude::*};
 use web_sys::{AddEventListenerOptions, MouseEvent, TouchEvent};
+use websocket::SocketContext;
 use world_manager::WorldManager;
 
 mod ec;
 mod global;
 mod render;
 mod webapi_utils;
+mod websocket;
 mod world_manager;
+
+pub const DEFAULT_GAME_SERVER: &'static str = "ws://172.17.0.2:8080";
 
 #[macro_export]
 macro_rules! log {
@@ -34,16 +38,15 @@ pub fn client_init() {
     };
     let ec = RefCell::new(EcCtx::new(&graphics));
     let wm = RefCell::new(WorldManager::new(&mut *ec.borrow_mut()));
+    let socket_context = SocketContext::new();
     global::init_ctx(Context {
       graphics,
       ec,
       world_manager: wm,
+      socket_context,
     });
     let global = global::get_ref();
-    global
-      .world_manager
-      .borrow_mut()
-      .init_offline(&mut *global.ec.borrow_mut());
+    global.socket_context.connect(DEFAULT_GAME_SERVER);
 
     let window = web_sys::window().unwrap();
     let mut nopassive_opt = AddEventListenerOptions::new();
