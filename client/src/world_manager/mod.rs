@@ -1,6 +1,13 @@
-use std::collections::{hash_map::Entry, HashMap};
+use std::{
+  collections::{hash_map::Entry, HashMap},
+  todo,
+};
 
-use crate::{ec::EcCtx, render::view::ViewportInfo};
+use crate::{
+  ec::EcCtx,
+  enc::{encode_player_position, encode_player_score},
+  render::view::ViewportInfo,
+};
 use crate::{
   ec::{
     components::{
@@ -13,12 +20,27 @@ use crate::{
   global,
   render::{view::view_matrix, ViewportSize},
 };
-use game_core::{STAGE_MIN_HEIGHT, STAGE_WIDTH, dec::parse_entity_id, ec::{DeltaTime, components::{EntityId, bell::BellComponent, physics::Velocity, transform::WorldSpaceTransform}}, gen::BellGenContext};
+use game_core::{
+  dec::parse_entity_id,
+  ec::{
+    components::{
+      bell::BellComponent, physics::Velocity, player::PlayerComponent,
+      transform::WorldSpaceTransform, EntityId,
+    },
+    DeltaTime,
+  },
+  gen::BellGenContext,
+  STAGE_MIN_HEIGHT, STAGE_WIDTH,
+};
 use glam::f32::*;
-use protocol::servermsg_generated::{ServerMessage, ServerMessageInner};
+use protocol::{
+  clientmsg_generated::ClientMessage,
+  flatbuffers::{FlatBufferBuilder, WIPOffset},
+  servermsg_generated::{ServerMessage, ServerMessageInner},
+};
 use specs::{Builder, Entity, EntityBuilder, Join, WorldExt};
 pub mod player;
-use player::{create_background, create_our_player, create_remote_player};
+use player::{create_background, create_our_player, create_remote_player, delete_player};
 
 pub struct WorldManager {
   me: Option<Entity>,
@@ -225,8 +247,37 @@ impl WorldManager {
           .unwrap();
       }
       ServerMessageInner::PlayerDelete => {
-        let _msg = msg.msg_as_player_delete().unwrap();
+        let msg = msg.msg_as_player_delete().unwrap();
+        let uuid = parse_entity_id(msg.id().unwrap());
+        match self.entityid_map.get(&uuid) {
+          None => {},
+          Some(&ent) => {
+            delete_player(ec, ent);
+          }
+        }
       }
     }
+  }
+
+  pub fn get_regular_updates<'a, F>(
+    &mut self,
+    ec: &mut EcCtx,
+    fbb: &mut FlatBufferBuilder<'a>,
+    mut send: F,
+  ) where
+    F: FnMut(WIPOffset<ClientMessage<'a>>, &mut FlatBufferBuilder<'a>),
+  {
+    if self.me.is_none() {
+      return;
+    }
+    let me = self.me.unwrap();
+    let trs = ec.world.read_storage::<WorldSpaceTransform>();
+    let vels = ec.world.read_storage::<Velocity>();
+    let pls = ec.world.read_storage::<PlayerComponent>();
+    let tr = trs.get(me).unwrap();
+    let vel = vels.get(me).unwrap();
+    let score = pls.get(me).unwrap().score;
+    send(encode_player_position(fbb, tr, vel), fbb);
+    send(encode_player_score(fbb, score), fbb);
   }
 }

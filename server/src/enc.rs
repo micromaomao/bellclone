@@ -1,7 +1,7 @@
-use game_core::ec::components::{
+use game_core::{ec::components::{
   physics::Velocity, player::PlayerComponent, transform::WorldSpaceTransform, EntityId,
-};
-use protocol::{flatbuffers::{FlatBufferBuilder, WIPOffset}, servermsg_generated::{PlayerUpdate, PlayerUpdateBuilder, ServerMessage, ServerMessageBuilder, ServerMessageInner}};
+}, enc::encode_entity_id};
+use protocol::{flatbuffers::{FlatBufferBuilder, WIPOffset}, servermsg_generated::{PlayerDeleteBuilder, PlayerUpdate, PlayerUpdateBuilder, ServerMessage, ServerMessageBuilder, ServerMessageInner}};
 
 
 pub fn encode_player_update<'a>(
@@ -10,7 +10,7 @@ pub fn encode_player_update<'a>(
   entity_id: &EntityId,
   tr: &WorldSpaceTransform,
   vel: &Velocity,
-) -> WIPOffset<PlayerUpdate<'a>> {
+) -> WIPOffset<ServerMessage<'a>> {
   let mut b = PlayerUpdateBuilder::new(fbb);
   let id = game_core::enc::encode_entity_id(*entity_id);
   b.add_id(&id);
@@ -22,7 +22,19 @@ pub fn encode_player_update<'a>(
   let vel = vel.0;
   let vel = protocol::base_generated::Vec2::new(vel.x, vel.y);
   b.add_vel(&vel);
-  b.finish()
+  let msg = b.finish();
+  to_message(fbb, msg, ServerMessageInner::PlayerUpdate)
+}
+
+pub fn encode_player_delete<'a>(
+  fbb: &mut FlatBufferBuilder<'a>,
+  entity_id: EntityId
+) -> WIPOffset<ServerMessage<'a>> {
+  let mut b = PlayerDeleteBuilder::new(fbb);
+  let uuid = encode_entity_id(entity_id);
+  b.add_id(&uuid);
+  let msg = b.finish();
+  to_message(fbb, msg, ServerMessageInner::PlayerDelete)
 }
 
 pub fn to_message<'a, Msg: 'a>(

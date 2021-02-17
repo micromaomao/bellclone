@@ -10,21 +10,30 @@ use std::{
 };
 
 use clap::Arg;
+use enc::encode_player_delete;
 use futures::{FutureExt, Sink, SinkExt, Stream, StreamExt};
-use game_core::ec::{
-  components::{
-    physics::Velocity,
-    player::{build_player, PlayerComponent},
-    transform::WorldSpaceTransform,
-    EntityId,
+use game_core::{
+  dec::parse_score,
+  ec::{
+    components::{
+      physics::Velocity,
+      player::{build_player, PlayerComponent},
+      transform::WorldSpaceTransform,
+      EntityId,
+    },
+    register_common_components, register_common_systems, DeltaTime,
   },
-  register_common_components, register_common_systems, DeltaTime,
 };
-use protocol::servermsg_generated::{
-  PlayerUpdateBuilder, ServerMessage, ServerMessageBuilder, ServerMessageInner,
-  ServerMessageInnerUnionTableOffset,
+use glam::f32::*;
+use protocol::{
+  clientmsg_generated::{get_root_as_client_message, ClientMessage, ClientMessageInner},
+  flatbuffers::FlatBufferBuilder,
+  servermsg_generated::{
+    PlayerUpdateBuilder, ServerMessage, ServerMessageBuilder, ServerMessageInner,
+    ServerMessageInnerUnionTableOffset,
+  },
 };
-use specs::{Builder, Dispatcher, DispatcherBuilder, World, WorldExt};
+use specs::{Builder, Dispatcher, DispatcherBuilder, Entity, World, WorldExt};
 use std::error::Error;
 use thread::sleep;
 use tokio::{
@@ -145,27 +154,82 @@ async fn accept_ws(
   let mut fbb = protocol::flatbuffers::FlatBufferBuilder::new();
   let player_uuid;
   let player_ent;
+
+  struct PlayerUpdateBody<'a, 'b, 'c, 'd>(
+    &'a PlayerComponent,
+    &'b EntityId,
+    &'c WorldSpaceTransform,
+    &'d Velocity,
+  );
+
+  macro_rules! get_current_player_state {
+    ($w:expr) => {
+      PlayerUpdateBody(
+        $w.read_storage::<PlayerComponent>()
+          .get(player_ent)
+          .unwrap(),
+        &player_uuid,
+        $w.read_storage::<WorldSpaceTransform>()
+          .get(player_ent)
+          .unwrap(),
+        $w.read_storage::<Velocity>().get(player_ent).unwrap(),
+      )
+    };
+  }
+  fn send_player_update(
+    server_ctx: &'static ServerContext,
+    fbb: &mut FlatBufferBuilder,
+    PlayerUpdateBody(player_c, entity_id, tr, vel): PlayerUpdateBody<'_, '_, '_, '_>,
+  ) {
+    fbb.reset();
+    let msg = enc::encode_player_update(fbb, player_c, entity_id, tr, vel);
+    fbb.finish(msg, None);
+    server_ctx.broadcast(fbb.finished_data().to_vec());
+  }
+  async fn process_client_msg<'a>(
+    server_ctx: &'static ServerContext,
+    msg: ClientMessage<'a>,
+    player_ent: Entity,
+  ) -> Result<(), ()> {
+    match msg.msg_type() {
+      ClientMessageInner::NONE => Err(()),
+      ClientMessageInner::PlayerPosition => {
+        let msg = msg.msg_as_player_position().ok_or(())?;
+        let pos = msg.pos().ok_or(())?;
+        let new_wt = WorldSpaceTransform::from_pos(Vec3::new(pos.x(), pos.y(), 0f32));
+        let vel = msg.vel().ok_or(())?;
+        let new_vel = Velocity(Vec2::new(vel.x(), vel.y()));
+        let mut w = server_ctx.borrow_world().await;
+        w.write_storage::<WorldSpaceTransform>()
+          .insert(player_ent, new_wt);
+        w.write_storage::<Velocity>().insert(player_ent, new_vel);
+        Ok(())
+      }
+      ClientMessageInner::PlayerScore => {
+        let msg = msg.msg_as_player_score().ok_or(())?;
+        let score = msg.new_score().ok_or(())?;
+        let score = parse_score(&score);
+        let mut w = server_ctx.borrow_world().await;
+        w.write_storage::<PlayerComponent>()
+          .get_mut(player_ent)
+          .unwrap()
+          .score = score;
+        Ok(())
+      }
+    }
+  }
+
   {
     let mut w = server_ctx.borrow_world().await;
     player_ent = build_player(&mut *w).build();
     player_uuid = *w.read_storage::<EntityId>().get(player_ent).unwrap();
-    fbb.reset();
-    let off = enc::encode_player_update(
-      &mut fbb,
-      w.read_storage::<PlayerComponent>().get(player_ent).unwrap(),
-      &player_uuid,
-      w.read_storage::<WorldSpaceTransform>()
-        .get(player_ent)
-        .unwrap(),
-      w.read_storage::<Velocity>().get(player_ent).unwrap(),
-    );
-    let msg = enc::to_message(&mut fbb, off, ServerMessageInner::PlayerUpdate);
-    fbb.finish(msg, None);
+    send_player_update(server_ctx, &mut fbb, get_current_player_state!(w));
   }
-  server_ctx.broadcast(fbb.finished_data().to_vec());
+
   let mut delay_fut = interval(Duration::from_millis(100));
   let broadcast_sub = server_ctx.subscribe_broadcast();
   let mut broadcast_sub = BroadcastStream::new(broadcast_sub);
+  let mut player_changed = false;
   loop {
     fbb.reset();
     futures::select! {
@@ -174,13 +238,38 @@ async fn accept_ws(
           ws.send(Message::Binary(data.to_vec())).await;
         }
       },
-      _ = delay_fut.tick().fuse() => {
-        // todo
-      },
-      _data = ws.next().fuse() => {
-        // todo
+      _ = delay_fut.tick().fuse() => {{
+        if player_changed {
+          let mut w = server_ctx.borrow_world().await;
+          send_player_update(server_ctx, &mut fbb, get_current_player_state!(w));
+          player_changed = false;
+        }
+      }},
+      data = ws.next().fuse() => {
+        match data {
+          Some(Ok(Message::Binary(data))) => {
+            let msg = decode_client_message(&data);
+            if process_client_msg(server_ctx, msg, player_ent).await.is_ok() {
+              player_changed = true;
+            }
+          },
+          Some(Err(_)) | None => {
+            break;
+          },
+          _ => {}
+        }
       }
     }
   }
+  fbb.reset();
+  let msg = encode_player_delete(&mut fbb, player_uuid);
+  fbb.finish(msg, None);
+  server_ctx.broadcast(fbb.finished_data().to_vec());
+  server_ctx.borrow_world().await.delete_entity(player_ent);
   Ok(())
+}
+
+pub fn decode_client_message(msg: &[u8]) -> ClientMessage<'_> {
+  // TODO: implement message verifying
+  get_root_as_client_message(msg)
 }

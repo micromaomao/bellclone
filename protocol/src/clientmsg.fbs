@@ -1,0 +1,21 @@
+include "base.fbs";
+
+union ClientMessageInner {
+  PlayerPosition,
+  PlayerScore,
+}
+
+table ClientMessage {
+  msg: ClientMessageInner;
+}
+
+table PlayerPosition {
+  pos: Vec2;
+  vel: Vec2;
+}
+
+table PlayerScore {
+  new_score: Score;
+}
+
+root_type ClientMessage;

@@ -1,14 +1,13 @@
 use std::cell::RefCell;
 
-use js_sys::{Uint8Array};
-use protocol::servermsg_generated;
+use js_sys::Uint8Array;
+use protocol::{flatbuffers::FlatBufferBuilder, servermsg_generated};
 
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{BinaryType, MessageEvent, WebSocket};
+use web_sys::{window, BinaryType, MessageEvent, WebSocket};
 
 use crate::global;
-
 
 pub struct SocketContext {
   connection_id: RefCell<u32>,
@@ -35,49 +34,52 @@ impl SocketContext {
   }
 
   pub fn connect(&'static self, server: &str) {
-    let mut connection_id = self.connection_id.borrow_mut();
-    let mut ws_obj = self.ws_obj.borrow_mut();
-    *connection_id += 1;
-    *ws_obj = Some(WebSocket::new(server).unwrap());
-    let ws_obj = ws_obj.as_ref().unwrap();
-    let connection_id = *connection_id;
-    ws_obj.set_binary_type(BinaryType::Arraybuffer);
-    ws_obj.set_onopen(
-      Closure::wrap(Box::new(move || {
-        if self.check_id(connection_id) {
-          self.onopen();
-        }
-      }) as Box<dyn Fn()>)
-      .into_js_value()
-      .dyn_ref(),
-    );
-    ws_obj.set_onclose(
-      Closure::wrap(Box::new(move || {
-        if self.check_id(connection_id) {
-          self.onclose();
-        }
-      }) as Box<dyn Fn()>)
-      .into_js_value()
-      .dyn_ref(),
-    );
-    ws_obj.set_onmessage(
-      Closure::wrap(Box::new(move |evt: JsValue| {
-        if self.check_id(connection_id) {
-          self.onmessage(evt.dyn_into().unwrap());
-        }
-      }) as Box<dyn Fn(JsValue)>)
-      .into_js_value()
-      .dyn_ref(),
-    );
-    ws_obj.set_onerror(
-      Closure::wrap(Box::new(move || {
-        if self.check_id(connection_id) {
-          self.onerror();
-        }
-      }) as Box<dyn Fn()>)
-      .into_js_value()
-      .dyn_ref(),
-    );
+    {
+      let mut connection_id = self.connection_id.borrow_mut();
+      let mut ws_obj = self.ws_obj.borrow_mut();
+      *connection_id += 1;
+      *ws_obj = Some(WebSocket::new(server).unwrap());
+      let ws_obj = ws_obj.as_ref().unwrap();
+      let connection_id = *connection_id;
+      ws_obj.set_binary_type(BinaryType::Arraybuffer);
+      ws_obj.set_onopen(
+        Closure::wrap(Box::new(move || {
+          if self.check_id(connection_id) {
+            self.onopen();
+          }
+        }) as Box<dyn Fn()>)
+        .into_js_value()
+        .dyn_ref(),
+      );
+      ws_obj.set_onclose(
+        Closure::wrap(Box::new(move || {
+          if self.check_id(connection_id) {
+            self.onclose();
+          }
+        }) as Box<dyn Fn()>)
+        .into_js_value()
+        .dyn_ref(),
+      );
+      ws_obj.set_onmessage(
+        Closure::wrap(Box::new(move |evt: JsValue| {
+          if self.check_id(connection_id) {
+            self.onmessage(evt.dyn_into().unwrap());
+          }
+        }) as Box<dyn Fn(JsValue)>)
+        .into_js_value()
+        .dyn_ref(),
+      );
+      ws_obj.set_onerror(
+        Closure::wrap(Box::new(move || {
+          if self.check_id(connection_id) {
+            self.onerror();
+          }
+        }) as Box<dyn Fn()>)
+        .into_js_value()
+        .dyn_ref(),
+      );
+    }
+    self.do_regular_update();
   }
 
   fn check_id(&self, expected_id: u32) -> bool {
@@ -106,5 +108,34 @@ impl SocketContext {
     wm_and_ec!(wm, ec);
     wm.show_connection_error(ec);
     wm.init_offline(ec);
+  }
+
+  fn do_regular_update(&'static self) {
+    wm_and_ec!(wm, ec);
+    let mut ws = self.ws_obj.borrow_mut();
+    if ws.is_none() {
+      return;
+    }
+    let ws = ws.as_mut().unwrap();
+    let mut fbb = FlatBufferBuilder::new();
+    wm.get_regular_updates(ec, &mut fbb, |msg, fbb| {
+      fbb.finish(msg, None);
+      let _ = ws.send_with_u8_array(fbb.finished_data());
+      fbb.reset();
+    });
+    let curr_conn_id = *self.connection_id.borrow();
+    window()
+      .unwrap()
+      .set_timeout_with_callback_and_timeout_and_arguments_0(
+        Closure::wrap(Box::new(move || {
+          if *self.connection_id.borrow() == curr_conn_id {
+            self.do_regular_update();
+          }
+        }) as Box<dyn Fn()>)
+        .into_js_value()
+        .dyn_ref()
+        .unwrap(),
+        100,
+      ).unwrap();
   }
 }

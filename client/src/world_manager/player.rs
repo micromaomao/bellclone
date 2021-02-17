@@ -2,7 +2,7 @@ use crate::{
   ec::{
     components::{
       debug::DebugRect,
-      player::{OurPlayer, OurPlayerState},
+      player::{OurPlayer, OurPlayerState, WithScoreDisplay},
       DrawImage,
     },
     EcCtx,
@@ -43,4 +43,18 @@ pub fn create_background(ec: &mut EcCtx) -> Entity {
     .with(WorldSpaceTransform::from_pos(Vec3::zero()))
     .with(DebugRect::default())
     .build()
+}
+
+pub fn delete_player(ec: &mut EcCtx, ent: Entity) {
+  if let Some(score_display) = {
+    let x = ec
+      .world
+      .read_storage::<WithScoreDisplay>()
+      .get(ent)
+      .map(|x| x.0);
+    x
+  } {
+    ec.world.delete_entity(score_display).unwrap();
+  }
+  ec.world.delete_entity(ent);
 }

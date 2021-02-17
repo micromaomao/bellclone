@@ -23,6 +23,6 @@ fn generate_fbs(paths: &[&str]) -> Result<(), String> {
 }
 
 fn main() -> Result<(), String> {
-  generate_fbs(&["src/base.fbs", "src/servermsg.fbs"])?;
+  generate_fbs(&["src/base.fbs", "src/servermsg.fbs", "src/clientmsg.fbs"])?;
   Ok(())
 }

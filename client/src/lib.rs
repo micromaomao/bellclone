@@ -16,6 +16,7 @@ mod render;
 mod webapi_utils;
 mod websocket;
 mod world_manager;
+mod enc;
 
 pub const DEFAULT_GAME_SERVER: &str = "ws://172.17.0.2:8080";
 
