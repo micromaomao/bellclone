@@ -38,7 +38,7 @@ impl<'a> System<'a> for ShowPlayerScoreSystem {
         player_tr.add(Mat4::from_scale_rotation_translation(
           Vec3::new(SCORE_SCALE, SCORE_SCALE, 1f32),
           Quat::default(),
-          Vec3::unit_y() * 0.3f32,
+          Vec3::Y * 0.3f32,
         )),
       ).unwrap();
     }

@@ -46,7 +46,7 @@ impl<'a> System<'a> for DrawNumbersSystem {
         .set_uniform(
           "uTransform",
           UniformValue::Matrix4(
-            (dctx.viewport.view_matrix * tr.0 * Mat4::from_translation(Vec3::unit_x() * xshift))
+            (dctx.viewport.view_matrix * tr.0 * Mat4::from_translation(Vec3::X * xshift))
               .to_cols_array(),
           ),
         )

@@ -8,10 +8,10 @@ edition = "2018"
 
 [dependencies]
 game_core = { path = "../core" }
-glam = "0.12"
+glam = "0.18"
 uuid = { version = "0.8", features = ["v4"] }
-specs = { version = "0.16", features = ["parallel"] }
-tokio-tungstenite = { version = "0.13" }
+specs = { version = "0.17", features = ["parallel"] }
+tokio-tungstenite = { version = "0.15" }
 tokio = { version = "1.2", features = ["rt-multi-thread", "time", "sync", "macros"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
 clap = "2.33"

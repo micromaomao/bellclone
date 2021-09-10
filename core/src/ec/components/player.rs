@@ -19,7 +19,7 @@ pub fn build_player(world: &mut World) -> EntityBuilder {
     .create_entity()
     .with(PlayerComponent { score: 0u128 })
     .with(EntityId::new())
-    .with(WorldSpaceTransform::from_pos(Vec3::zero()))
+    .with(WorldSpaceTransform::from_pos(Vec3::ZERO))
     .with(Velocity::default())
     .with(Gravity::default())
 }

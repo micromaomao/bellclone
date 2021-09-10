@@ -133,7 +133,7 @@ impl<'a> System<'a> for OurPlayerSystem {
             let sg = ents.create();
             fade_outs.insert(sg, FadeOut::new(0.6f32)).unwrap();
             dns.insert(sg, dn).unwrap();
-            trs.insert(sg, WorldSpaceTransform::from_pos(pos + Vec3::unit_y() * 0.2f32).add(Mat4::from_scale(Vec3::new(0.2f32, 0.2f32, 1f32)))).unwrap();
+            trs.insert(sg, WorldSpaceTransform::from_pos(pos + Vec3::Y * 0.2f32).add(Mat4::from_scale(Vec3::new(0.2f32, 0.2f32, 1f32)))).unwrap();
           } else if vel.0.y < -FALLING_THRESHOLD_SPEED {
             our_p.state = OurPlayerState::Falling;
           }

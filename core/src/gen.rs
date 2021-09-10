@@ -26,7 +26,7 @@ pub struct BellGenContext {
 impl BellGenContext {
   pub fn new() -> Self {
     BellGenContext {
-      last_point: Vec2::zero(),
+      last_point: Vec2::ZERO,
       x_variation_scaling: 1f32,
       bell_size: INIT_SIZE,
       next_difficulty_raise: 0u32

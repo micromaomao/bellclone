@@ -9,9 +9,9 @@ js-sys = { version = "0.3" }
 wasm-bindgen = { version = "0.2", features = ["default", "serde-serialize"] }
 golem = { version = "0.1", features = ["web-sys"] }
 game_core = { path = "../core" }
-specs = { version = "0.16", default-features = false, features = ["wasm-bindgen"] }
+specs = { version = "0.17", default-features = false, features = ["wasm-bindgen"] }
 image = { version = "0.23", features = ["png"], default-features = false }
-glam = "0.12"
+glam = "0.18"
 console_error_panic_hook = "0.1.6"
 uuid = { version = "0.8", features = ["wasm-bindgen"] }
 protocol = { path = "../protocol" }

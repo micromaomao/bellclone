@@ -40,7 +40,7 @@ pub fn create_our_player(ec: &mut EcCtx) -> Entity {
 pub fn create_background(ec: &mut EcCtx) -> Entity {
   ec.world
     .create_entity()
-    .with(WorldSpaceTransform::from_pos(Vec3::zero()))
+    .with(WorldSpaceTransform::from_pos(Vec3::ZERO))
     .with(DebugRect::default())
     .build()
 }

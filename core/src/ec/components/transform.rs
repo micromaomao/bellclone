@@ -9,7 +9,7 @@ impl Component for WorldSpaceTransform {
 
 impl WorldSpaceTransform {
   pub fn position(&self) -> Vec3 {
-    self.0.transform_point3(Vec3::zero())
+    self.0.transform_point3(Vec3::ZERO)
   }
   pub fn add(&self, transform: Mat4) -> Self {
     Self(self.0 * transform)

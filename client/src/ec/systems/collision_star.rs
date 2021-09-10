@@ -34,7 +34,7 @@ impl<'a> System<'a> for CollisionStarSystem {
         break;
       }
       let dist = STAR_INIT_DISTANCE + STAR_TRAVEL_DISTANCE * (1f32 - (1f32 - (star.alive_time / STAR_LIVE)).powi(6));
-      let new_tr = star.base_transform * Mat4::from_translation(Vec3::unit_x() * dist);
+      let new_tr = star.base_transform * Mat4::from_translation(Vec3::X * dist);
       tr.0 = new_tr;
       di.alpha = 1f32 - (star.alive_time / STAR_LIVE);
     }
