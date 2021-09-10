@@ -192,7 +192,6 @@ async fn accept_ws(
     player_ent: Entity,
   ) -> Result<(), ()> {
     match msg.msg_type() {
-      ClientMessageInner::NONE => Err(()),
       ClientMessageInner::PlayerPosition => {
         let msg = msg.msg_as_player_position().ok_or(())?;
         let pos = msg.pos().ok_or(())?;
@@ -216,6 +215,7 @@ async fn accept_ws(
           .score = score;
         Ok(())
       }
+      _ => Err(()),
     }
   }
 

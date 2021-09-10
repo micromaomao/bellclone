@@ -220,7 +220,6 @@ impl WorldManager {
       return;
     }
     match msg.msg_type() {
-      ServerMessageInner::NONE => unreachable!(),
       ServerMessageInner::PlayerUpdate => {
         let msg = msg.msg_as_player_update().unwrap();
         let player_id = parse_entity_id(msg.id().unwrap());
@@ -256,6 +255,7 @@ impl WorldManager {
           }
         }
       }
+      _ => unreachable!(),
     }
   }
 
