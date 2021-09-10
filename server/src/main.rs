@@ -226,7 +226,7 @@ async fn accept_ws(
     send_player_update(server_ctx, &mut fbb, get_current_player_state!(w));
   }
 
-  let mut delay_fut = interval(Duration::from_millis(100));
+  let mut delay_fut = interval(Duration::from_millis(50));
   let broadcast_sub = server_ctx.subscribe_broadcast();
   let mut broadcast_sub = BroadcastStream::new(broadcast_sub);
   let mut player_changed = false;

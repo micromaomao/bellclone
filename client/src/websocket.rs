@@ -135,7 +135,7 @@ impl SocketContext {
         .into_js_value()
         .dyn_ref()
         .unwrap(),
-        100,
+        50,
       ).unwrap();
   }
 }
