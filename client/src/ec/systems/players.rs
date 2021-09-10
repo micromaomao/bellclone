@@ -1,6 +1,6 @@
 use game_core::ec::components::{player::PlayerComponent, transform::WorldSpaceTransform};
 use glam::f32::*;
-use specs::{Entities, Entity, Join, Read, ReadStorage, System, WriteStorage};
+use specs::{Entities, Join, ReadStorage, System, WriteStorage};
 
 use crate::ec::components::{
   draw_numbers::{Align, DrawNumbersComponent},
@@ -27,20 +27,26 @@ impl<'a> System<'a> for ShowPlayerScoreSystem {
         dnid = score_display.0;
       } else {
         dnid = ents.create();
-        dns.insert(dnid, DrawNumbersComponent::new(1f32, Align::Center)).unwrap();
-        with_score_displays.insert(entid, WithScoreDisplay(dnid)).unwrap();
+        dns
+          .insert(dnid, DrawNumbersComponent::new(1f32, Align::Center))
+          .unwrap();
+        with_score_displays
+          .insert(entid, WithScoreDisplay(dnid))
+          .unwrap();
       }
       let dn = dns.get_mut(dnid).unwrap();
       dn.set_number(player.score);
       let player_tr = *trs.get(entid).unwrap();
-      trs.insert(
-        dnid,
-        player_tr.add(Mat4::from_scale_rotation_translation(
-          Vec3::new(SCORE_SCALE, SCORE_SCALE, 1f32),
-          Quat::default(),
-          Vec3::Y * 0.3f32,
-        )),
-      ).unwrap();
+      trs
+        .insert(
+          dnid,
+          player_tr.add(Mat4::from_scale_rotation_translation(
+            Vec3::new(SCORE_SCALE, SCORE_SCALE, 1f32),
+            Quat::default(),
+            Vec3::Y * 0.3f32,
+          )),
+        )
+        .unwrap();
     }
   }
 }

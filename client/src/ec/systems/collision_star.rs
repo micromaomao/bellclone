@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use game_core::ec::{components::transform::WorldSpaceTransform, DeltaTime};
 use glam::f32::*;
-use specs::{Entities, Join, Read, ReadStorage, System, World, WriteStorage};
+use specs::{Entities, Join, Read, System, WriteStorage};
 
 use crate::{
   ec::components::{collision_star::CollisionStar, DrawImage},
@@ -33,7 +33,8 @@ impl<'a> System<'a> for CollisionStarSystem {
         ents.delete(entid).unwrap();
         break;
       }
-      let dist = STAR_INIT_DISTANCE + STAR_TRAVEL_DISTANCE * (1f32 - (1f32 - (star.alive_time / STAR_LIVE)).powi(6));
+      let dist = STAR_INIT_DISTANCE
+        + STAR_TRAVEL_DISTANCE * (1f32 - (1f32 - (star.alive_time / STAR_LIVE)).powi(6));
       let new_tr = star.base_transform * Mat4::from_translation(Vec3::X * dist);
       tr.0 = new_tr;
       di.alpha = 1f32 - (star.alive_time / STAR_LIVE);

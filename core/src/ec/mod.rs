@@ -28,6 +28,14 @@ pub fn register_common_components(w: &mut World) {
 
 pub fn register_common_systems(dispatch: &mut DispatcherBuilder) {
   dispatch.add(systems::physics::GravitySystem, "gravity_system", &[]);
-  dispatch.add(systems::physics::VelocitySystem, "velocity_system", &["gravity_system"]);
-  dispatch.add(systems::player::PlayerSystem, "player_system", &["velocity_system"]);
+  dispatch.add(
+    systems::physics::VelocitySystem,
+    "velocity_system",
+    &["gravity_system"],
+  );
+  dispatch.add(
+    systems::player::PlayerSystem,
+    "player_system",
+    &["velocity_system"],
+  );
 }

@@ -1,8 +1,16 @@
-use game_core::{ec::components::{
-  physics::Velocity, player::PlayerComponent, transform::WorldSpaceTransform, EntityId,
-}, enc::encode_entity_id};
-use protocol::{flatbuffers::{FlatBufferBuilder, WIPOffset}, servermsg_generated::{PlayerDeleteBuilder, PlayerUpdate, PlayerUpdateBuilder, ServerMessage, ServerMessageBuilder, ServerMessageInner}};
-
+use game_core::{
+  ec::components::{
+    physics::Velocity, player::PlayerComponent, transform::WorldSpaceTransform, EntityId,
+  },
+  enc::encode_entity_id,
+};
+use protocol::{
+  flatbuffers::{FlatBufferBuilder, WIPOffset},
+  servermsg_generated::{
+    PlayerDeleteBuilder, PlayerUpdateBuilder, ServerMessage, ServerMessageBuilder,
+    ServerMessageInner,
+  },
+};
 
 pub fn encode_player_update<'a>(
   fbb: &mut FlatBufferBuilder<'a>,
@@ -28,7 +36,7 @@ pub fn encode_player_update<'a>(
 
 pub fn encode_player_delete<'a>(
   fbb: &mut FlatBufferBuilder<'a>,
-  entity_id: EntityId
+  entity_id: EntityId,
 ) -> WIPOffset<ServerMessage<'a>> {
   let mut b = PlayerDeleteBuilder::new(fbb);
   let uuid = encode_entity_id(entity_id);

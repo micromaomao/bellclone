@@ -10,7 +10,7 @@ impl FadeOut {
   pub fn new(life: f32) -> Self {
     Self {
       alive: 0f32,
-      total_time: life
+      total_time: life,
     }
   }
 }

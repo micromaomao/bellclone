@@ -1,14 +1,13 @@
 use core::panic;
 use std::{cell::RefCell, error::Error};
 
-
 use golem::{blend::BlendMode, glow};
 use js_sys::Object;
 use js_sys::Reflect;
 use shader_program::Shaders;
-use view::{ViewportInfo};
+use view::ViewportInfo;
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{HtmlCanvasElement};
+use web_sys::HtmlCanvasElement;
 
 pub mod image_texture;
 pub mod numbers;

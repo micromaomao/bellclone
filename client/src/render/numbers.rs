@@ -23,7 +23,7 @@ pub fn get_digit_glyph_texcord(digit: u8) -> TexCords {
       top: CH / H,
       left: i as f32 * CW / W,
       right: (i + 1) as f32 * CW / W,
-      bottom: 2f32 * CH / H
+      bottom: 2f32 * CH / H,
     }
   } else {
     panic!("Invalid digit");

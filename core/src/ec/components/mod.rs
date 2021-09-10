@@ -3,10 +3,10 @@ use std::str::FromStr;
 use specs::{Component, DenseVecStorage};
 use uuid::Uuid;
 
-pub mod transform;
-pub mod player;
-pub mod physics;
 pub mod bell;
+pub mod physics;
+pub mod player;
+pub mod transform;
 
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct EntityId(pub Uuid);

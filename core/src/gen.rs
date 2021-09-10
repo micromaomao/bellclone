@@ -1,11 +1,11 @@
 use std::ops::Range;
 
 use glam::f32::*;
-use rand::{Rng};
+use rand::Rng;
 use rand_distr::StandardNormal;
 use specs::{Builder, Entity, EntityBuilder, World};
 
-use crate::{STAGE_MAX_X, STAGE_MIN_X, ec::components::bell::build_bell};
+use crate::{ec::components::bell::build_bell, STAGE_MAX_X, STAGE_MIN_X};
 
 const LOWEST_Y: f32 = 2f32;
 const INIT_X_VARIATION: f32 = 2f32;
@@ -29,7 +29,7 @@ impl BellGenContext {
       last_point: Vec2::ZERO,
       x_variation_scaling: 1f32,
       bell_size: INIT_SIZE,
-      next_difficulty_raise: 0u32
+      next_difficulty_raise: 0u32,
     }
   }
 

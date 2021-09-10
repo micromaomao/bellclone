@@ -1,12 +1,19 @@
-use specs::{ReadStorage, System, WriteStorage};
+use crate::ec::{
+  components::{physics::Velocity, transform::WorldSpaceTransform},
+  DeltaTime,
+};
 use glam::f32::*;
-use crate::ec::{DeltaTime, components::{physics::Velocity, transform::WorldSpaceTransform}};
 use specs::{Join, Read};
+use specs::{ReadStorage, System, WriteStorage};
 
 pub struct VelocitySystem;
 
 impl<'a> System<'a> for VelocitySystem {
-  type SystemData = (WriteStorage<'a, WorldSpaceTransform>, ReadStorage<'a, Velocity>, Read<'a, DeltaTime>);
+  type SystemData = (
+    WriteStorage<'a, WorldSpaceTransform>,
+    ReadStorage<'a, Velocity>,
+    Read<'a, DeltaTime>,
+  );
 
   fn run(&mut self, (mut trs, vels, dt): Self::SystemData) {
     let dt = dt.as_secs_f32();

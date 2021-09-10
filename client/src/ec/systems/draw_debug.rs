@@ -24,9 +24,7 @@ impl DrawDebug {
       3, 1, // \
       0, 2, // /
     ]);
-    Ok(Self {
-      buf, ele
-    })
+    Ok(Self { buf, ele })
   }
 }
 

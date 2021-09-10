@@ -1,5 +1,5 @@
-use specs::{Component, DenseVecStorage};
 use glam::f32::*;
+use specs::{Component, DenseVecStorage};
 
 #[derive(Default)]
 pub struct CollisionStar {

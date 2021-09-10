@@ -11,7 +11,7 @@ use std::{
 
 use clap::Arg;
 use enc::encode_player_delete;
-use futures::{FutureExt, Sink, SinkExt, Stream, StreamExt};
+use futures::{FutureExt, SinkExt, StreamExt};
 use game_core::{
   dec::parse_score,
   ec::{
@@ -28,10 +28,6 @@ use glam::f32::*;
 use protocol::{
   clientmsg_generated::{get_root_as_client_message, ClientMessage, ClientMessageInner},
   flatbuffers::FlatBufferBuilder,
-  servermsg_generated::{
-    PlayerUpdateBuilder, ServerMessage, ServerMessageBuilder, ServerMessageInner,
-    ServerMessageInnerUnionTableOffset,
-  },
 };
 use specs::{Builder, Dispatcher, DispatcherBuilder, Entity, World, WorldExt};
 use std::error::Error;
@@ -198,7 +194,7 @@ async fn accept_ws(
         let new_wt = WorldSpaceTransform::from_pos(Vec3::new(pos.x(), pos.y(), 0f32));
         let vel = msg.vel().ok_or(())?;
         let new_vel = Velocity(Vec2::new(vel.x(), vel.y()));
-        let mut w = server_ctx.borrow_world().await;
+        let w = server_ctx.borrow_world().await;
         w.write_storage::<WorldSpaceTransform>()
           .insert(player_ent, new_wt);
         w.write_storage::<Velocity>().insert(player_ent, new_vel);
@@ -208,7 +204,7 @@ async fn accept_ws(
         let msg = msg.msg_as_player_score().ok_or(())?;
         let score = msg.new_score().ok_or(())?;
         let score = parse_score(&score);
-        let mut w = server_ctx.borrow_world().await;
+        let w = server_ctx.borrow_world().await;
         w.write_storage::<PlayerComponent>()
           .get_mut(player_ent)
           .unwrap()
@@ -240,7 +236,7 @@ async fn accept_ws(
       },
       _ = delay_fut.tick().fuse() => {{
         if player_changed {
-          let mut w = server_ctx.borrow_world().await;
+          let w = server_ctx.borrow_world().await;
           send_player_update(server_ctx, &mut fbb, get_current_player_state!(w));
           player_changed = false;
         }

@@ -11,12 +11,12 @@ use websocket::SocketContext;
 use world_manager::WorldManager;
 
 mod ec;
+mod enc;
 mod global;
 mod render;
 mod webapi_utils;
 mod websocket;
 mod world_manager;
-mod enc;
 
 pub const DEFAULT_GAME_SERVER: &str = "ws://127.0.0.1:5000";
 

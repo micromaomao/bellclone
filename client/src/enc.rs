@@ -4,8 +4,8 @@ use game_core::{
 };
 use protocol::{
   clientmsg_generated::{
-    ClientMessage, ClientMessageBuilder, ClientMessageInner, PlayerPosition, PlayerPositionBuilder,
-    PlayerScore, PlayerScoreBuilder,
+    ClientMessage, ClientMessageBuilder, ClientMessageInner, PlayerPositionBuilder,
+    PlayerScoreBuilder,
   },
   flatbuffers::{FlatBufferBuilder, WIPOffset},
 };

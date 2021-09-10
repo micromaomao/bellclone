@@ -1,4 +1,6 @@
-use crate::{ec::EcCtx, render::GraphicsCtx, websocket::SocketContext, world_manager::WorldManager};
+use crate::{
+  ec::EcCtx, render::GraphicsCtx, websocket::SocketContext, world_manager::WorldManager,
+};
 use std::{cell::RefCell, mem::MaybeUninit};
 
 pub struct Context {

@@ -4,7 +4,10 @@ use game_core::ec::components::transform::WorldSpaceTransform;
 use golem::{Context, ElementBuffer, UniformValue, VertexBuffer};
 use specs::{Join, Read, ReadStorage, System};
 
-use crate::{ec::components::{DrawImage, player::OurPlayer}, render::DrawingCtx};
+use crate::{
+  ec::components::{player::OurPlayer, DrawImage},
+  render::DrawingCtx,
+};
 
 pub struct DrawImageSystem {
   buf: VertexBuffer,
@@ -25,9 +28,7 @@ impl DrawImageSystem {
       1, 2, 0, // /|
       3, // |/
     ]);
-    Ok(Self {
-      buf, ele
-    })
+    Ok(Self { buf, ele })
   }
 }
 

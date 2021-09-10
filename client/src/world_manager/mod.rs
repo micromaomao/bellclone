@@ -1,7 +1,4 @@
-use std::{
-  collections::{hash_map::Entry, HashMap},
-  todo,
-};
+use std::collections::{hash_map::Entry, HashMap};
 
 use crate::{
   ec::EcCtx,
@@ -249,7 +246,7 @@ impl WorldManager {
         let msg = msg.msg_as_player_delete().unwrap();
         let uuid = parse_entity_id(msg.id().unwrap());
         match self.entityid_map.get(&uuid) {
-          None => {},
+          None => {}
           Some(&ent) => {
             delete_player(ec, ent);
           }

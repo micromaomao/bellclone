@@ -10,8 +10,7 @@ use specs::{World, WorldExt};
 use user_input::PointerState;
 
 use crate::{
-  global,
-  render::{view::ViewportInfo, DrawingCtx, GraphicsCtx, ViewportSize},
+  render::{DrawingCtx, GraphicsCtx, ViewportSize},
   webapi_utils::perf_now_f64,
 };
 
@@ -189,7 +188,11 @@ fn build_game_dispatch<'a, 'b>() -> Dispatcher<'a, 'b> {
     &["our_player_system"],
   );
   game_dispatch.add(systems::effects::FadeOutSystem, "fade_out_system", &[]);
-  game_dispatch.add(systems::restart::RestartSystem::default(), "restart_system", &[]);
+  game_dispatch.add(
+    systems::restart::RestartSystem::default(),
+    "restart_system",
+    &[],
+  );
   game_dispatch.build()
 }
 
