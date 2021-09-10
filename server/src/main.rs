@@ -26,7 +26,7 @@ use game_core::{
 };
 use glam::f32::*;
 use protocol::{
-  clientmsg_generated::{get_root_as_client_message, ClientMessage, ClientMessageInner},
+  clientmsg_generated::{root_as_client_message, ClientMessage, ClientMessageInner},
   flatbuffers::FlatBufferBuilder,
 };
 use specs::{Builder, Dispatcher, DispatcherBuilder, Entity, World, WorldExt};
@@ -244,9 +244,13 @@ async fn accept_ws(
       data = ws.next().fuse() => {
         match data {
           Some(Ok(Message::Binary(data))) => {
-            let msg = decode_client_message(&data);
-            if process_client_msg(server_ctx, msg, player_ent).await.is_ok() {
-              player_changed = true;
+            match root_as_client_message(&data) {
+              Ok(msg) => {
+                if process_client_msg(server_ctx, msg, player_ent).await.is_ok() {
+                  player_changed = true;
+                }
+              },
+              Err(_) => {}
             }
           },
           Some(Err(_)) | None => {
@@ -263,9 +267,4 @@ async fn accept_ws(
   server_ctx.broadcast(fbb.finished_data().to_vec());
   server_ctx.borrow_world().await.delete_entity(player_ent);
   Ok(())
-}
-
-pub fn decode_client_message(msg: &[u8]) -> ClientMessage<'_> {
-  // TODO: implement message verifying
-  get_root_as_client_message(msg)
 }

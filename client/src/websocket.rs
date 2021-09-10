@@ -101,7 +101,7 @@ impl SocketContext {
     let mut msgbuf = self.msgbuf.borrow_mut();
     msgbuf.resize(data.byte_length() as usize, 0u8);
     data.copy_to(&mut msgbuf[..]);
-    let msg = servermsg_generated::get_root_as_server_message(&msgbuf[..]);
+    let msg = unsafe { servermsg_generated::root_as_server_message_unchecked(&msgbuf[..]) };
     wm.process_msg(ec, msg);
   }
   fn onerror(&'static self) {
