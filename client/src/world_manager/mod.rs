@@ -1,10 +1,6 @@
 use std::collections::{hash_map::Entry, HashMap};
 
-use crate::{
-  ec::EcCtx,
-  enc::{encode_player_position, encode_player_score},
-  render::view::ViewportInfo,
-};
+use crate::{ec::EcCtx, enc::{encode_player_position, encode_player_score}, log, render::view::ViewportInfo};
 use crate::{
   ec::{
     components::{
@@ -46,7 +42,7 @@ pub struct WorldManager {
   /// only used for tracking server bells
   entityid_map: HashMap<EntityId, Entity>,
   local_bell_gen: Option<BellGenContext>,
-  state: GameState,
+  state: GameState
 }
 
 pub const CAMERA_OFFSET_Y: f32 = -4f32;
@@ -230,6 +226,9 @@ impl WorldManager {
             new_ent
           }
         };
+        if ec.world.read_storage::<OurPlayer>().contains(ent) {
+          return;
+        }
         ec.world
           .write_storage::<WorldSpaceTransform>()
           .insert(
@@ -251,6 +250,30 @@ impl WorldManager {
             delete_player(ec, ent);
           }
         }
+      },
+      ServerMessageInner::Bell => {
+        let msg = msg.msg_as_bell().unwrap();
+        let w = &mut ec.world;
+        let pos = msg.pos().unwrap();
+        let b = game_core::ec::components::bell::build_bell(w, msg.size_(), glam::Vec2::new(pos.x(), pos.y()));
+        let b = WorldManager::attach_bell_client_commponent(b);
+        b.build();
+      },
+      ServerMessageInner::YourIDIs => {
+        let msg = msg.msg_as_your_idis().unwrap();
+        let id = parse_entity_id(msg.id().unwrap());
+        log!("Our id is {}", id.0);
+        let ops = ec.world.read_storage::<OurPlayer>();
+        let ent = ec.world.entities();
+        let mut our_player_ent = None;
+        for (_, ent) in (&ops, &ent).join() {
+          our_player_ent = Some(ent);
+          break;
+        }
+        if let Some(&e) = self.entityid_map.get(&id) {
+          ent.delete(e);
+        }
+        self.entityid_map.insert(id, our_player_ent.unwrap());
       }
       _ => unreachable!(),
     }

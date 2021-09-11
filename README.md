@@ -5,3 +5,5 @@ It's not clear what `EcCtx` vs `WorldManager` does. Some global resources are st
 `server/main.rs` is simply too messy. Should also get rid of the unsafe code.
 
 Put all system/component/resources in one place, while registering different dispatches for client and server.
+
+Functions that do things like create entities, etc. should never take `&mut World`, and should instead take a set of storages.

@@ -10,26 +10,22 @@ use std::{
 };
 
 use clap::Arg;
-use enc::encode_player_delete;
+use ec::BellSequenceNumber;
+use enc::{encode_bell, encode_player_delete};
 use futures::{FutureExt, SinkExt, StreamExt};
-use game_core::{
-  dec::parse_score,
-  ec::{
+use game_core::{dec::parse_score, ec::{
     components::{
+      bell::BellComponent,
       physics::Velocity,
       player::{build_player, PlayerComponent},
       transform::WorldSpaceTransform,
       EntityId,
     },
     register_common_components, register_common_systems, DeltaTime,
-  },
-};
-use glam::f32::*;
-use protocol::{
-  clientmsg_generated::{root_as_client_message, ClientMessage, ClientMessageInner},
-  flatbuffers::FlatBufferBuilder,
-};
-use specs::{Builder, Dispatcher, DispatcherBuilder, Entity, World, WorldExt};
+  }, enc::encode_entity_id, gen::BellGenContext};
+use glam::{Vec3Swizzles, f32::*};
+use protocol::{clientmsg_generated::{root_as_client_message, ClientMessage, ClientMessageInner}, flatbuffers::FlatBufferBuilder, servermsg_generated::{ServerMessageInner, YourIDIs, YourIDIsBuilder}};
+use specs::{Builder, Dispatcher, DispatcherBuilder, Entity, Join, World, WorldExt};
 use std::error::Error;
 use thread::sleep;
 use tokio::{
@@ -40,6 +36,7 @@ use tokio::{
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_tungstenite::tungstenite::Message;
 
+mod ec;
 mod enc;
 
 struct ServerContext {
@@ -51,12 +48,15 @@ struct ServerContext {
 struct MainThreadContext {
   dispatch: Dispatcher<'static, 'static>,
   last_update: Instant,
+  bellgen: BellGenContext,
+  next_bell_seq: u64,
 }
 
 impl ServerContext {
   pub fn new() -> (ServerContext, MainThreadContext) {
     let mut w = World::new();
     register_common_components(&mut w);
+    w.register::<ec::BellSequenceNumber>();
     w.insert(DeltaTime::default());
     let server_ctx = ServerContext {
       broadcast_server_message: broadcast::channel(100).0,
@@ -72,6 +72,8 @@ impl ServerContext {
     let mt_ctx = MainThreadContext {
       dispatch: dispatch.build(),
       last_update: Instant::now(),
+      bellgen: BellGenContext::new(),
+      next_bell_seq: 0u64,
     };
     (server_ctx, mt_ctx)
   }
@@ -99,6 +101,43 @@ impl ServerContext {
     let dt = DeltaTime::from_secs_f32(dt.as_secs_f32());
     *w.write_resource::<DeltaTime>() = dt;
     mt_ctx.dispatch.dispatch(&*w);
+    let mut max_y = 0f32;
+    {
+      let players = w.read_storage::<PlayerComponent>();
+      let poses = w.read_storage::<WorldSpaceTransform>();
+      for (player, pos) in (&players, &poses).join() {
+        let thisy = pos.position().y;
+        if max_y < thisy {
+          max_y = thisy;
+        }
+      }
+    }
+    let mut need_to_broadcast_bells: Vec<Entity> = Vec::new();
+    let next_bell_seq = &mut mt_ctx.next_bell_seq;
+    mt_ctx
+      .bellgen
+      .ensure(max_y + game_core::STAGE_MIN_HEIGHT, &mut *w, |b| {
+        let seq = *next_bell_seq;
+        need_to_broadcast_bells.push(b.entity);
+        *next_bell_seq += 1;
+        b.with(BellSequenceNumber(seq))
+      });
+    {
+      let poses = w.read_storage::<WorldSpaceTransform>();
+      let bells = w.read_storage::<BellComponent>();
+      let mut fbb = FlatBufferBuilder::new();
+      for e in need_to_broadcast_bells {
+        let buf: Vec<u8> = Vec::new();
+        if let Some(&BellComponent { size }) = bells.get(e) {
+          if let Some(wt) = poses.get(e) {
+            let msg = encode_bell(&mut fbb, bells.get(e).unwrap().size, &wt.position().xy());
+            fbb.finish(msg, None);
+            self.broadcast(fbb.finished_data().to_vec());
+            fbb.reset();
+          }
+        }
+      }
+    }
     w.maintain();
   }
 }
@@ -225,7 +264,29 @@ async fn accept_ws(
     player_ent = build_player(&mut *w).build();
     player_uuid = *w.read_storage::<EntityId>().get(player_ent).unwrap();
     send_player_update(server_ctx, &mut fbb, get_current_player_state!(w));
+
+    fbb.reset();
+    let bells = w.read_storage::<BellComponent>();
+    let poses = w.read_storage::<WorldSpaceTransform>();
+    for (b, wt) in (&bells, &poses).join() {
+      let msg = encode_bell(&mut fbb, b.size, &wt.position().xy());
+      fbb.finish(msg, None);
+      ws.feed(Message::Binary(fbb.finished_data().to_vec())).await;
+      fbb.reset();
+    }
   }
+
+  {
+    let mut idmsg = YourIDIsBuilder::new(&mut fbb);
+    idmsg.add_id(&encode_entity_id(player_uuid));
+    let idmsg = idmsg.finish();
+    let msg = enc::to_message(&mut fbb, idmsg, ServerMessageInner::YourIDIs);
+    fbb.finish(msg, None);
+    ws.feed(Message::Binary(fbb.finished_data().to_vec())).await;
+    fbb.reset();
+  }
+
+  ws.flush().await;
 
   let mut delay_fut = interval(Duration::from_millis(50));
   let broadcast_sub = server_ctx.subscribe_broadcast();
@@ -265,6 +326,7 @@ async fn accept_ws(
         }
       }
     }
+    fbb.reset();
   }
   fbb.reset();
   let msg = encode_player_delete(&mut fbb, player_uuid);

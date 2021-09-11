@@ -3,6 +3,8 @@ include "base.fbs";
 union ServerMessageInner {
   PlayerUpdate,
   PlayerDelete,
+  Bell,
+  YourIDIs,
 }
 
 table ServerMessage {
@@ -17,6 +19,15 @@ table PlayerUpdate {
 }
 
 table PlayerDelete {
+  id: Uuid;
+}
+
+table Bell {
+  pos: Vec2;
+  size: float;
+}
+
+table YourIDIs {
   id: Uuid;
 }
 
