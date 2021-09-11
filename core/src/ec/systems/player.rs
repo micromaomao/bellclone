@@ -5,9 +5,9 @@ use crate::ec::components::{
 };
 use glam::f32::*;
 
-pub struct PlayerSystem;
+pub struct PlayerLimitSystem;
 
-impl<'a> System<'a> for PlayerSystem {
+impl<'a> System<'a> for PlayerLimitSystem {
   type SystemData = (
     ReadStorage<'a, PlayerComponent>,
     WriteStorage<'a, WorldSpaceTransform>,

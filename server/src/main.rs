@@ -64,6 +64,11 @@ impl ServerContext {
     };
     let mut dispatch = DispatcherBuilder::new();
     register_common_systems(&mut dispatch);
+    dispatch.add(
+      game_core::ec::systems::player::PlayerLimitSystem,
+      "player_limit_system",
+      &[],
+    );
     let mt_ctx = MainThreadContext {
       dispatch: dispatch.build(),
       last_update: Instant::now(),
@@ -115,7 +120,7 @@ fn main() {
       args.value_of("listen").unwrap().to_owned(),
       server_ctx_static,
     )));
-    const MIN_DELAY: Duration = Duration::from_millis(8); // ~120fps
+    const MIN_DELAY: Duration = Duration::from_millis(200);
     loop {
       let start = mt_ctx.last_update;
       server_ctx.update(&async_rt, &mut mt_ctx);

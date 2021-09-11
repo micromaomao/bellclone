@@ -168,6 +168,16 @@ fn build_game_dispatch<'a, 'b>() -> Dispatcher<'a, 'b> {
   let mut game_dispatch = DispatcherBuilder::new();
   register_common_systems(&mut game_dispatch);
   game_dispatch.add(
+    game_core::ec::systems::physics::VelocitySystem,
+    "velocity_system",
+    &["gravity_system"],
+  );
+  game_dispatch.add(
+    game_core::ec::systems::player::PlayerLimitSystem,
+    "player_limit_system",
+    &["velocity_system"],
+  );
+  game_dispatch.add(
     systems::our_player::OurPlayerSystem,
     "our_player_system",
     &[],
