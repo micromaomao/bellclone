@@ -1,0 +1,59 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  server-test:
+    runs-on: ubuntu-latest
+    container:
+      image: rust:latest
+    steps:
+      - name: Install flatc
+        run: >
+          apt-get update -y && apt-get install -y curl unzip &&
+          mkdir /tmp/flatc &&
+          cd /tmp/flatc &&
+          curl -sL 'https://github.com/google/flatbuffers/releases/download/v2.0.0/Linux.flatc.binary.clang++-9.zip' -o flatc.zip &&
+          unzip flatc.zip &&
+          cp flatc /usr/bin &&
+          chmod a+rx /usr/bin/flatc
+      - uses: actions/checkout@v2
+      - run: >
+          cd core && cargo test && cd ..
+      - run: >
+          cd server && cargo test && cd ..
+  build-client:
+    runs-on: ubuntu-latest
+    container:
+      image: rust:latest
+    steps:
+      - name: Install wasm-pack
+        run: curl 'https://rustwasm.github.io/wasm-pack/installer/init.sh' -sSf | sh
+      - name: Install flatc
+        run: >
+          apt-get update -y && apt-get install -y curl unzip &&
+          mkdir /tmp/flatc &&
+          cd /tmp/flatc &&
+          curl -sL 'https://github.com/google/flatbuffers/releases/download/v2.0.0/Linux.flatc.binary.clang++-9.zip' -o flatc.zip &&
+          unzip flatc.zip &&
+          cp flatc /usr/bin &&
+          chmod a+rx /usr/bin/flatc
+      - uses: actions/checkout@v2
+      - run: ./package-client.sh
+      - uses: actions/upload-artifact@v2
+        with:
+          name: package
+          path: client.tar.gz
+  upload:
+    runs-on: ubuntu-latest
+    needs: build-client
+    if: ${{ github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: package
+      - run: tar --one-top-level=dist -zxvf client.tar.gz
+      - run: echo bellclone.maowtm.org > dist/CNAME
+      - uses: JamesIves/github-pages-deploy-action@4.1.5
+        with:
+          branch: gh-pages
+          folder: dist
