@@ -13,5 +13,6 @@ FROM debian:latest
 COPY --from=build --chown=0:0 /usr/src/app/server/target/release/server /server
 RUN chmod a+rx /server
 USER 1000:1000
-ENTRYPOINT [ "/server", "0.0.0.0:5000" ]
+ENTRYPOINT [ "/server" ]
+CMD [ "0.0.0.0:5000" ]
 EXPOSE 5000
