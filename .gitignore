@@ -2,3 +2,4 @@ target
 /client/pkg
 node_modules
 dist
+client.tar.gz
