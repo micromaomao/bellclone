@@ -1,15 +1,10 @@
 use game_core::ec::components::{bell::BellComponent, player::PlayerComponent};
 use specs::{Entities, Entity, Join, ReadStorage, System, WriteStorage};
 
-use crate::ec::components::{
-  bell::OurJumpableBell,
-  player::{OurPlayer, OurPlayerState},
-};
+use crate::ec::components::{DrawImage, bell::OurJumpableBell, player::{OurPlayer, OurPlayerState}};
 
 #[derive(Debug, Default)]
-pub struct RestartSystem {
-  entbuf: Vec<Entity>,
-}
+pub struct RestartSystem;
 
 impl<'a> System<'a> for RestartSystem {
   type SystemData = (
@@ -18,18 +13,18 @@ impl<'a> System<'a> for RestartSystem {
     WriteStorage<'a, PlayerComponent>,
     ReadStorage<'a, BellComponent>,
     WriteStorage<'a, OurJumpableBell>,
+    WriteStorage<'a, DrawImage>,
   );
 
-  fn run(&mut self, (ents, mut ops, mut ps, bells, mut ojbs): Self::SystemData) {
+  fn run(&mut self, (ents, mut ops, mut ps, bells, mut ojbs, mut dics): Self::SystemData) {
     for (op, p) in (&mut ops, &mut ps).join() {
       if op.state == OurPlayerState::NotStarted {
-        for (entid, _, _) in (&ents, &bells, !&ojbs).join() {
-          self.entbuf.push(entid);
+        for (ent, _, draw) in (&ents, &bells, &mut dics).join() {
+          if !ojbs.contains(ent) {
+            ojbs.insert(ent, OurJumpableBell);
+            draw.alpha = 1f32;
+          }
         }
-        for &ent in self.entbuf.iter() {
-          ojbs.insert(ent, OurJumpableBell).unwrap();
-        }
-        self.entbuf.clear();
         p.score = 0;
         op.next_bell_score = 10;
         break;

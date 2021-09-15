@@ -4,7 +4,7 @@ use game_core::{
   },
   enc::encode_entity_id,
 };
-use protocol::{flatbuffers::{FlatBufferBuilder, WIPOffset}, servermsg_generated::{BellBuilder, PlayerDeleteBuilder, PlayerUpdateBuilder, ServerMessage, ServerMessageBuilder, ServerMessageInner}};
+use protocol::{flatbuffers::{FlatBufferBuilder, WIPOffset}, servermsg_generated::{Bell, BellBuilder, PlayerDeleteBuilder, PlayerUpdateBuilder, ServerMessage, ServerMessageBuilder, ServerMessageInner}};
 
 pub fn encode_player_update<'a>(
   fbb: &mut FlatBufferBuilder<'a>,
@@ -50,10 +50,9 @@ pub fn to_message<'a, Msg: 'a>(
   b.finish()
 }
 
-pub fn encode_bell<'a>(fbb: &mut FlatBufferBuilder<'a>, size: f32, pos: &glam::Vec2) -> WIPOffset<ServerMessage<'a>> {
+pub fn encode_bell<'a>(fbb: &mut FlatBufferBuilder<'a>, size: f32, pos: &glam::Vec2, vel: &glam::Vec2) -> WIPOffset<Bell<'a>> {
   let mut b = BellBuilder::new(fbb);
-  b.add_size_(size);
   b.add_pos(&protocol::base_generated::Vec2::new(pos.x, pos.y));
-  let msg = b.finish();
-  to_message(fbb, msg, ServerMessageInner::Bell)
+  b.add_vel(&protocol::base_generated::Vec2::new(vel.x, vel.y));
+  b.finish()
 }

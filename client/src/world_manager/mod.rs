@@ -1,6 +1,11 @@
 use std::collections::{hash_map::Entry, HashMap};
 
-use crate::{ec::EcCtx, enc::{encode_player_position, encode_player_score}, log, render::view::ViewportInfo};
+use crate::{
+  ec::EcCtx,
+  enc::{encode_player_position, encode_player_score},
+  log,
+  render::view::ViewportInfo,
+};
 use crate::{
   ec::{
     components::{
@@ -20,9 +25,9 @@ use game_core::{
       bell::BellComponent, physics::Velocity, player::PlayerComponent,
       transform::WorldSpaceTransform, EntityId,
     },
+    systems::create_bell::CreateBellSystemControl,
     DeltaTime,
   },
-  gen::BellGenContext,
   STAGE_MIN_HEIGHT, STAGE_WIDTH,
 };
 use glam::f32::*;
@@ -41,8 +46,7 @@ pub struct WorldManager {
   camera_y: f32,
   /// only used for tracking server bells
   entityid_map: HashMap<EntityId, Entity>,
-  local_bell_gen: Option<BellGenContext>,
-  state: GameState
+  state: GameState,
 }
 
 pub const CAMERA_OFFSET_Y: f32 = -4f32;
@@ -67,7 +71,6 @@ impl WorldManager {
       background: None,
       camera_y: CAMERA_INIT_Y,
       entityid_map: HashMap::new(),
-      local_bell_gen: None,
       state: GameState::Connecting,
     }
   }
@@ -79,29 +82,12 @@ impl WorldManager {
   }
 
   pub fn init_offline(&mut self, ec: &mut EcCtx) {
+    ec.world.write_resource::<CreateBellSystemControl>().enabled = true;
     self.init_common(ec);
     if self.me.is_none() {
       self.me = Some(create_our_player(ec));
     } // otherwise we can just keep the current player position and "switch seamlessly" from online to offline.
-    let mut bell_gen = BellGenContext::new();
-    let mut highest_pos: Option<Vec2> = None;
-    for (_, bell_pos) in (
-      &ec.world.read_storage::<BellComponent>(),
-      &ec.world.read_storage::<WorldSpaceTransform>(),
-    )
-      .join()
-    {
-      let p = bell_pos.position();
-      let this_pos = Vec2::new(p.x, p.y);
-      if highest_pos.is_none() || highest_pos.unwrap().y < this_pos.y {
-        highest_pos = Some(this_pos);
-      }
-    }
-    if let Some(pos) = highest_pos {
-      bell_gen.set_last_point(pos);
-    }
     ec.world.maintain();
-    self.local_bell_gen = Some(bell_gen);
     self.state = GameState::Offline;
   }
 
@@ -113,7 +99,6 @@ impl WorldManager {
     ec.world.delete_all();
     self.background = None;
     self.me = None;
-    self.local_bell_gen = None;
     self.init_common(ec);
     self.me = Some(create_our_player(ec));
     self.state = GameState::Online;
@@ -131,31 +116,7 @@ impl WorldManager {
     }
   }
 
-  fn attach_bell_client_commponent(ent: EntityBuilder) -> EntityBuilder {
-    ent
-      .with(DrawImage {
-        texture: &global::get_ref().graphics.images.gopher,
-        size: Vec2::new(1f32, 1f32),
-        alpha: 1f32,
-      })
-      .with(OurJumpableBell)
-  }
-
-  pub fn offline_update(&mut self, ec: &mut EcCtx) {
-    let player_pos = ec
-      .world
-      .read_storage::<WorldSpaceTransform>()
-      .get(self.me.unwrap())
-      .map(|x| x.position());
-    if let Some(player_pos) = player_pos {
-      let bell_gen = self.local_bell_gen.as_mut().unwrap();
-      bell_gen.ensure(
-        player_pos.y + 12f32,
-        &mut ec.world,
-        Self::attach_bell_client_commponent,
-      )
-    }
-  }
+  pub fn offline_update(&mut self, ec: &mut EcCtx) {}
 
   pub fn calculate_camera(&mut self, ec: &EcCtx, viewport_size: ViewportSize) -> ViewportInfo {
     let w = &ec.world;
@@ -250,15 +211,29 @@ impl WorldManager {
             delete_player(ec, ent);
           }
         }
-      },
-      ServerMessageInner::Bell => {
-        let msg = msg.msg_as_bell().unwrap();
+      }
+      ServerMessageInner::Bells => {
+        use game_core::ec::systems::create_bell::BELL_SIZE; // TODO
+        let msg = msg.msg_as_bells().unwrap();
         let w = &mut ec.world;
-        let pos = msg.pos().unwrap();
-        let b = game_core::ec::components::bell::build_bell(w, msg.size_(), glam::Vec2::new(pos.x(), pos.y()));
-        let b = WorldManager::attach_bell_client_commponent(b);
-        b.build();
-      },
+        for b in msg.bells().unwrap() {
+          w.create_entity()
+            .with(BellComponent { size: BELL_SIZE })
+            .with(
+              WorldSpaceTransform::from_pos(Vec3::new(
+                b.pos().unwrap().x(),
+                b.pos().unwrap().y(),
+                0f32,
+              ))
+              .add(Mat4::from_scale(Vec3::new(BELL_SIZE, BELL_SIZE, 1f32))),
+            )
+            .with(Velocity(Vec2::new(
+              b.vel().unwrap().x(),
+              b.vel().unwrap().y(),
+            )))
+            .build();
+        }
+      }
       ServerMessageInner::YourIDIs => {
         let msg = msg.msg_as_your_idis().unwrap();
         let id = parse_entity_id(msg.id().unwrap());

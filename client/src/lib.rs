@@ -21,7 +21,7 @@ mod world_manager;
 // FIXME: https://github.com/rust-lang/rust/issues/67441
 pub const DEFAULT_GAME_SERVER: &str = match option_env!("CLIENT_WS_URL") {
   Some(url) => url,
-  None => "ws://localhost:5000"
+  None => "ws://localhost:5000",
 };
 
 #[macro_export]

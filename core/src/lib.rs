@@ -1,7 +1,6 @@
 pub mod dec;
 pub mod ec;
 pub mod enc;
-pub mod gen;
 mod test_enc;
 
 pub const STAGE_MIN_X: f32 = -8f32;

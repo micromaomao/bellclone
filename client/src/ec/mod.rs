@@ -3,7 +3,7 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
-use game_core::ec::{register_common_components, register_common_systems, DeltaTime};
+use game_core::ec::{DeltaTime, register_common_components, register_common_systems, systems::create_bell::CreateBellSystemControl};
 use golem::{ElementBuffer, GeometryMode, Surface, Texture, UniformValue, VertexBuffer};
 use specs::{Dispatcher, DispatcherBuilder};
 use specs::{World, WorldExt};
@@ -43,6 +43,7 @@ impl EcCtx {
     world.insert(DeltaTime::default());
     world.insert(PointerState::default());
     world.insert(BlurFlags::default());
+    world.insert(CreateBellSystemControl::default());
     world.maintain();
     let glctx = &graphics.glctx;
     let mut buf = VertexBuffer::new(glctx).unwrap();
@@ -167,11 +168,6 @@ fn register_client_components(w: &mut World) {
 fn build_game_dispatch<'a, 'b>() -> Dispatcher<'a, 'b> {
   let mut game_dispatch = DispatcherBuilder::new();
   register_common_systems(&mut game_dispatch);
-  game_dispatch.add(
-    game_core::ec::systems::physics::VelocitySystem,
-    "velocity_system",
-    &["gravity_system"],
-  );
   game_dispatch.add(
     game_core::ec::systems::player::PlayerLimitSystem,
     "player_limit_system",

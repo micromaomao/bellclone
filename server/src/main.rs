@@ -10,21 +10,17 @@ use std::{
 };
 
 use clap::Arg;
-use ec::BellSequenceNumber;
 use enc::{encode_bell, encode_player_delete};
 use futures::{FutureExt, SinkExt, StreamExt};
-use game_core::{dec::parse_score, ec::{
-    components::{
+use game_core::{dec::parse_score, ec::{DeltaTime, components::{
       bell::BellComponent,
       physics::Velocity,
       player::{build_player, PlayerComponent},
       transform::WorldSpaceTransform,
       EntityId,
-    },
-    register_common_components, register_common_systems, DeltaTime,
-  }, enc::encode_entity_id, gen::BellGenContext};
-use glam::{Vec3Swizzles, f32::*};
-use protocol::{clientmsg_generated::{root_as_client_message, ClientMessage, ClientMessageInner}, flatbuffers::FlatBufferBuilder, servermsg_generated::{ServerMessageInner, YourIDIs, YourIDIsBuilder}};
+    }, register_common_components, register_common_systems, systems::create_bell::CreateBellSystemControl}, enc::encode_entity_id};
+use glam::{f32::*, Vec3Swizzles};
+use protocol::{clientmsg_generated::{root_as_client_message, ClientMessage, ClientMessageInner}, flatbuffers::FlatBufferBuilder, servermsg_generated::{BellsBuilder, ServerMessageInner, YourIDIs, YourIDIsBuilder}};
 use specs::{Builder, Dispatcher, DispatcherBuilder, Entity, Join, World, WorldExt};
 use std::error::Error;
 use thread::sleep;
@@ -35,6 +31,8 @@ use tokio::{
 };
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_tungstenite::tungstenite::Message;
+
+use crate::enc::to_message;
 
 mod ec;
 mod enc;
@@ -48,16 +46,16 @@ struct ServerContext {
 struct MainThreadContext {
   dispatch: Dispatcher<'static, 'static>,
   last_update: Instant,
-  bellgen: BellGenContext,
-  next_bell_seq: u64,
 }
 
 impl ServerContext {
   pub fn new() -> (ServerContext, MainThreadContext) {
     let mut w = World::new();
     register_common_components(&mut w);
-    w.register::<ec::BellSequenceNumber>();
     w.insert(DeltaTime::default());
+    let mut ctl = CreateBellSystemControl::default();
+    ctl.enabled = true;
+    w.insert(ctl);
     let server_ctx = ServerContext {
       broadcast_server_message: broadcast::channel(100).0,
       ecworld: Mutex::new(w),
@@ -69,11 +67,14 @@ impl ServerContext {
       "player_limit_system",
       &[],
     );
+    dispatch.add(
+      ec::ServerBellsSystem,
+      "server_bells_system",
+      &[]
+    );
     let mt_ctx = MainThreadContext {
       dispatch: dispatch.build(),
       last_update: Instant::now(),
-      bellgen: BellGenContext::new(),
-      next_bell_seq: 0u64,
     };
     (server_ctx, mt_ctx)
   }
@@ -112,31 +113,29 @@ impl ServerContext {
         }
       }
     }
-    let mut need_to_broadcast_bells: Vec<Entity> = Vec::new();
-    let next_bell_seq = &mut mt_ctx.next_bell_seq;
-    mt_ctx
-      .bellgen
-      .ensure(max_y + game_core::STAGE_MIN_HEIGHT, &mut *w, |b| {
-        let seq = *next_bell_seq;
-        need_to_broadcast_bells.push(b.entity);
-        *next_bell_seq += 1;
-        b.with(BellSequenceNumber(seq))
-      });
     {
+      let mut need_to_broadcast_bells = &mut w.write_resource::<CreateBellSystemControl>().last_round_gen;
       let poses = w.read_storage::<WorldSpaceTransform>();
       let bells = w.read_storage::<BellComponent>();
+      let vel = w.read_storage::<Velocity>();
       let mut fbb = FlatBufferBuilder::new();
-      for e in need_to_broadcast_bells {
-        let buf: Vec<u8> = Vec::new();
+      let mut buf = Vec::new();
+      for &e in need_to_broadcast_bells.iter() {
         if let Some(&BellComponent { size }) = bells.get(e) {
           if let Some(wt) = poses.get(e) {
-            let msg = encode_bell(&mut fbb, bells.get(e).unwrap().size, &wt.position().xy());
-            fbb.finish(msg, None);
-            self.broadcast(fbb.finished_data().to_vec());
-            fbb.reset();
+            let b = encode_bell(&mut fbb, bells.get(e).unwrap().size, &wt.position().xy(), &vel.get(e).unwrap().0);
+            buf.push(b);
           }
         }
       }
+      let v = fbb.create_vector(&buf);
+      let mut bells_msg = BellsBuilder::new(&mut fbb);
+      bells_msg.add_bells(v);
+      let bells_msg = bells_msg.finish();
+      let msg = to_message(&mut fbb, bells_msg, ServerMessageInner::Bells);
+      fbb.finish(msg, None);
+      self.broadcast(fbb.finished_data().to_vec());
+      need_to_broadcast_bells.clear();
     }
     w.maintain();
   }
@@ -268,12 +267,20 @@ async fn accept_ws(
     fbb.reset();
     let bells = w.read_storage::<BellComponent>();
     let poses = w.read_storage::<WorldSpaceTransform>();
-    for (b, wt) in (&bells, &poses).join() {
-      let msg = encode_bell(&mut fbb, b.size, &wt.position().xy());
-      fbb.finish(msg, None);
-      ws.feed(Message::Binary(fbb.finished_data().to_vec())).await;
-      fbb.reset();
+    let vel = w.read_storage::<Velocity>();
+    let mut buf = Vec::new();
+    for (b, wt, vel) in (&bells, &poses, &vel).join() {
+      let msg = encode_bell(&mut fbb, b.size, &wt.position().xy(), &vel.0);
+      buf.push(msg);
     }
+    let v = fbb.create_vector(&buf);
+    let mut bells_msg = BellsBuilder::new(&mut fbb);
+    bells_msg.add_bells(v);
+    let bells_msg = bells_msg.finish();
+    let msg = to_message(&mut fbb, bells_msg, ServerMessageInner::Bells);
+    fbb.finish(msg, None);
+    ws.feed(Message::Binary(fbb.finished_data().to_vec())).await;
+    fbb.reset();
   }
 
   {

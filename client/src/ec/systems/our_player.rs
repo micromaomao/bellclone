@@ -124,6 +124,7 @@ impl<'a> System<'a> for OurPlayerSystem {
           }
           if let Some(bell) = jumped_from {
             jumpable_bell_markers.remove(bell);
+            draw_images.get_mut(bell).unwrap().alpha = 0.3f32;
             let pos = trs.get(bell).unwrap().position();
             collision_star::build_stars((&ents, &mut colstars, &mut draw_images, &mut trs), pos);
             let mut dn = DrawNumbersComponent::new(1.0f32, Align::Center);
