@@ -158,7 +158,7 @@ fn main() {
       args.value_of("listen").unwrap().to_owned(),
       server_ctx_static,
     )));
-    const MIN_DELAY: Duration = Duration::from_millis(200);
+    const MIN_DELAY: Duration = Duration::from_millis(20);
     loop {
       let start = mt_ctx.last_update;
       server_ctx.update(&async_rt, &mut mt_ctx);
