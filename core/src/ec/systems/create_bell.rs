@@ -50,6 +50,11 @@ impl<'a> System<'a> for CreateBellSystem {
     if max_player_y.is_none() {
       return;
     }
+    if let Some(ent) = self.last_created {
+      if !ents.is_alive(ent) {
+        self.last_created = None;
+      }
+    }
     let max_player_y = max_player_y.unwrap();
     loop {
       let mut last_point = self
