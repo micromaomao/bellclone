@@ -297,7 +297,7 @@ async fn accept_ws(
 
   ws.flush().await;
 
-  let mut delay_fut = interval(Duration::from_millis(50));
+  let mut delay_fut = interval(Duration::from_millis(5));
   let broadcast_sub = server_ctx.subscribe_broadcast();
   let mut broadcast_sub = BroadcastStream::new(broadcast_sub);
   let mut player_changed = false;
