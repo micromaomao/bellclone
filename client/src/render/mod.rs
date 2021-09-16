@@ -38,12 +38,6 @@ pub struct DrawingCtx {
   pub images: &'static image_texture::Images,
 }
 
-impl Default for DrawingCtx {
-  fn default() -> Self {
-    panic!("Not possible.");
-  }
-}
-
 impl GraphicsCtx {
   pub fn init() -> Result<Self, Box<dyn Error>> {
     let window = web_sys::window().unwrap();

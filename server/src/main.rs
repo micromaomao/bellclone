@@ -71,16 +71,10 @@ impl ServerContext {
   pub fn new() -> (ServerContext, MainThreadContext) {
     let mut w = World::new();
     register_common_components(&mut w);
-    w.insert(DeltaTime::default());
     let mut ctl = CreateBellSystemControl::default();
     ctl.enabled = true;
     w.insert(ctl);
     w.insert(CreateBirdSystemController { enabled: true });
-    w.insert(MaxPlayerY::default());
-    let server_ctx = ServerContext {
-      broadcast_server_message: broadcast::channel(100).0,
-      ecworld: Mutex::new(w),
-    };
     let mut dispatch = DispatcherBuilder::new();
     register_common_systems(&mut dispatch);
     dispatch.add(
@@ -89,8 +83,14 @@ impl ServerContext {
       &[],
     );
     dispatch.add(ec::ServerBellsSystem, "server_bells_system", &[]);
+    let mut dispatch = dispatch.build();
+    dispatch.setup(&mut w);
+    let server_ctx = ServerContext {
+      broadcast_server_message: broadcast::channel(100).0,
+      ecworld: Mutex::new(w),
+    };
     let mt_ctx = MainThreadContext {
-      dispatch: dispatch.build(),
+      dispatch,
       last_update: Instant::now(),
     };
     (server_ctx, mt_ctx)

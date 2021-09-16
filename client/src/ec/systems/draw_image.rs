@@ -34,13 +34,14 @@ impl DrawImageSystem {
 
 impl<'a> System<'a> for DrawImageSystem {
   type SystemData = (
-    Read<'a, DrawingCtx>,
+    Option<Read<'a, DrawingCtx>>,
     ReadStorage<'a, WorldSpaceTransform>,
     ReadStorage<'a, DrawImage>,
     ReadStorage<'a, OurPlayer>,
   );
 
   fn run(&mut self, (dctx, trs, imgs, ops): Self::SystemData) {
+    let dctx = dctx.unwrap();
     let mut shaders = dctx.shaders.borrow_mut();
     let prog = &mut shaders.image;
     prog.bind();

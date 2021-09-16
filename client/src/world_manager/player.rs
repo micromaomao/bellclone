@@ -37,12 +37,12 @@ pub fn create_our_player(ec: &mut EcCtx) -> Entity {
     .build()
 }
 
-pub fn create_background(ec: &mut EcCtx) -> Entity {
+pub fn create_background(ec: &mut EcCtx) {
   ec.world
     .create_entity()
     .with(WorldSpaceTransform::from_pos(Vec3::ZERO))
     .with(DebugRect::default())
-    .build()
+    .build();
 }
 
 pub fn delete_player(ec: &mut EcCtx, ent: Entity) {

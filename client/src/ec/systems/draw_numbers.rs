@@ -24,12 +24,13 @@ impl DrawNumbersSystem {
 
 impl<'a> System<'a> for DrawNumbersSystem {
   type SystemData = (
-    Read<'a, DrawingCtx>,
+    Option<Read<'a, DrawingCtx>>,
     ReadStorage<'a, DrawNumbersComponent>,
     ReadStorage<'a, WorldSpaceTransform>,
   );
 
   fn run(&mut self, (dctx, dncs, trs): Self::SystemData) {
+    let dctx = dctx.unwrap();
     let mut shaders = dctx.shaders.borrow_mut();
     let tex = &dctx.images.numbers.gl_texture;
     tex.set_active(NonZeroU32::new(1).unwrap());

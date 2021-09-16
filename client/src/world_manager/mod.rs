@@ -31,7 +31,7 @@ use player::{create_background, create_our_player, create_remote_player, delete_
 
 pub struct WorldManager {
   me: Option<Entity>,
-  background: Option<Entity>,
+  background_created: bool,
   camera_y: f32,
   /// only used for tracking server bells
   entityid_map: HashMap<EntityId, Entity>,
@@ -57,7 +57,7 @@ impl WorldManager {
     // todo
     WorldManager {
       me: None,
-      background: None,
+      background_created: false,
       camera_y: CAMERA_INIT_Y,
       entityid_map: HashMap::new(),
       state: GameState::Connecting,
@@ -65,8 +65,9 @@ impl WorldManager {
   }
 
   pub fn init_common(&mut self, ec: &mut EcCtx) {
-    if self.background.is_none() {
-      self.background = Some(create_background(ec));
+    if !self.background_created {
+      create_background(ec);
+      self.background_created = true;
     }
   }
 
@@ -87,7 +88,7 @@ impl WorldManager {
 
   pub fn init_online(&mut self, ec: &mut EcCtx) {
     ec.world.delete_all();
-    self.background = None;
+    self.background_created = false;
     self.me = None;
     self.init_common(ec);
     self.me = Some(create_our_player(ec));

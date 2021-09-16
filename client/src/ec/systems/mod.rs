@@ -8,3 +8,4 @@ pub mod our_player;
 pub mod players;
 pub mod restart;
 pub mod bird;
+pub mod tutorial_and_score;

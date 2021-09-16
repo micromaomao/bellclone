@@ -30,12 +30,13 @@ impl DrawDebug {
 
 impl<'a> System<'a> for DrawDebug {
   type SystemData = (
-    Read<'a, DrawingCtx>,
+    Option<Read<'a, DrawingCtx>>,
     ReadStorage<'a, DebugRect>,
     ReadStorage<'a, WorldSpaceTransform>,
   );
 
   fn run(&mut self, (dctx, debug_rects, transforms): Self::SystemData) {
+    let dctx = dctx.unwrap();
     let mut shaders = dctx.shaders.borrow_mut();
     let prog = &mut shaders.debug_rect;
     prog.bind();
