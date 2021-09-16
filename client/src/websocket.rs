@@ -54,6 +54,7 @@ impl SocketContext {
       ws_obj.set_onclose(
         Closure::wrap(Box::new(move || {
           if self.check_id(connection_id) {
+            *self.ws_obj.borrow_mut() = None;
             self.onclose();
           }
         }) as Box<dyn Fn()>)
@@ -72,6 +73,7 @@ impl SocketContext {
       ws_obj.set_onerror(
         Closure::wrap(Box::new(move || {
           if self.check_id(connection_id) {
+            *self.ws_obj.borrow_mut() = None;
             self.onerror();
           }
         }) as Box<dyn Fn()>)
