@@ -172,6 +172,7 @@ fn register_client_components(w: &mut World) {
   w.register::<components::draw_numbers::DrawNumbersComponent>();
   w.register::<components::effects::FadeOut>();
   w.register::<components::BackgroundMarker>();
+  w.register::<components::background_stars::BackgroundStar>();
 }
 
 fn build_game_dispatch<'a, 'b>() -> Dispatcher<'a, 'b> {
@@ -224,6 +225,7 @@ fn build_game_dispatch<'a, 'b>() -> Dispatcher<'a, 'b> {
 fn build_render_dispatch<'a, 'b>(graphics: &GraphicsCtx) -> Dispatcher<'a, 'b> {
   let mut render_dispatch = DispatcherBuilder::new();
   let glctx = &graphics.glctx;
+  render_dispatch.add_thread_local(systems::background_stars::BackgroundStarSystem::default());
   render_dispatch.add_thread_local(systems::draw_debug::DrawDebug::new(glctx).unwrap());
   render_dispatch.add_thread_local(systems::draw_image::DrawImageSystem::new(glctx).unwrap());
   render_dispatch.add_thread_local(systems::draw_numbers::DrawNumbersSystem::new(glctx).unwrap());

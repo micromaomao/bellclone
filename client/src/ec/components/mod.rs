@@ -9,6 +9,7 @@ pub mod debug;
 pub mod draw_numbers;
 pub mod effects;
 pub mod player;
+pub mod background_stars;
 
 pub struct DrawImage {
   pub texture: &'static LoadedTexture,

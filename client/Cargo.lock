@@ -150,6 +150,7 @@ dependencies = [
  "image",
  "js-sys",
  "protocol",
+ "rand",
  "specs",
  "uuid",
  "wasm-bindgen",
