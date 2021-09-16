@@ -1,15 +1,18 @@
 use glam::{Mat4, Vec2, Vec3};
 use rand_distr::StandardNormal;
 use specs::{Entities, Entity, Join, Read, ReadStorage, System, Write, WriteStorage};
+use std::borrow::Borrow;
 use std::ops::Range;
 
 use crate::ec::components::physics::Velocity;
 use crate::ec::components::{
-  bell::BellComponent, player::PlayerComponent, transform::WorldSpaceTransform,
+  bell::BellComponent, transform::WorldSpaceTransform,
 };
 use crate::{STAGE_MAX_X, STAGE_MIN_HEIGHT, STAGE_MIN_X};
 use glam::Vec3Swizzles;
 use rand::Rng;
+
+use super::max_player_y::{MaxPlayerY};
 
 #[derive(Default)]
 pub struct CreateBellSystem {
@@ -34,22 +37,16 @@ impl<'a> System<'a> for CreateBellSystem {
     Entities<'a>,
     WriteStorage<'a, BellComponent>,
     WriteStorage<'a, WorldSpaceTransform>,
-    ReadStorage<'a, PlayerComponent>,
+    Read<'a, MaxPlayerY>,
     WriteStorage<'a, Velocity>,
   );
 
-  fn run(&mut self, (mut ctl, ents, mut bellc, mut wst, mut playerc, mut velc): Self::SystemData) {
-    if !ctl.enabled {
+  fn run(&mut self, (mut ctl, ents, mut bellc, mut wst, max_player_y, mut velc): Self::SystemData) {
+    let max_player_y = max_player_y.borrow().0;
+    if !ctl.enabled || max_player_y.is_none() {
       return;
     }
     ctl.last_round_gen.clear();
-    let max_player_y = (&playerc, &wst)
-      .join()
-      .map(|(_, w)| w.position().y)
-      .reduce(f32::max);
-    if max_player_y.is_none() {
-      return;
-    }
     if let Some(ent) = self.last_created {
       if !ents.is_alive(ent) {
         self.last_created = None;

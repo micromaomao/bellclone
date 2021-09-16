@@ -5,6 +5,7 @@ union ServerMessageInner {
   PlayerDelete,
   Bells,
   YourIDIs,
+  Birds,
 }
 
 table ServerMessage {
@@ -33,6 +34,17 @@ table Bell {
 
 table YourIDIs {
   id: Uuid;
+}
+
+table Birds {
+  birds: [Bird];
+}
+
+table Bird {
+  id: Uuid;
+  transform: Mat4;
+  dir_is_right: bool;
+  turning: bool;
 }
 
 root_type ServerMessage;

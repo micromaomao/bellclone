@@ -1,9 +1,4 @@
-use game_core::ec::{
-  components::{
-    bell::BellComponent, physics::Velocity, player::PlayerComponent, transform::WorldSpaceTransform,
-  },
-  DeltaTime,
-};
+use game_core::ec::{DeltaTime, components::{bell::BellComponent, bird::Bird, physics::Velocity, player::PlayerComponent, transform::WorldSpaceTransform}};
 use glam::f32::*;
 use specs::{Entities, Entity, Join, Read, ReadStorage, System, WriteStorage};
 
@@ -47,6 +42,7 @@ impl<'a> System<'a> for OurPlayerSystem {
     WriteStorage<'a, DrawImage>,
     WriteStorage<'a, FadeOut>,
     WriteStorage<'a, DrawNumbersComponent>,
+    ReadStorage<'a, Bird>,
   );
 
   fn run(
@@ -65,6 +61,7 @@ impl<'a> System<'a> for OurPlayerSystem {
       mut draw_images,
       mut fade_outs,
       mut dns,
+      birdc
     ): Self::SystemData,
   ) {
     for (p_entid, p, mut our_p, vel) in (&ents, &mut players, &mut our_players, &mut vels).join() {
@@ -104,9 +101,9 @@ impl<'a> System<'a> for OurPlayerSystem {
 
         if our_p.state != OurPlayerState::Falling {
           let mut jumped_from: Option<Entity> = None;
-          for (ent, bell, tr, _) in (&ents, &bells, &trs, &jumpable_bell_markers).join() {
+          for (ent, bell, bird, tr, _) in (&ents, bells.maybe(), birdc.maybe(), &trs, &jumpable_bell_markers).join() {
             let pos = tr.position();
-            let size = bell.size;
+            let size = bell.map(|x| x.size).unwrap_or(0.5f32);
             if (player_pos - pos).length_squared() < size * 0.5f32 {
               let mut v = vel.0.y;
               if v < 0f32 {
@@ -122,15 +119,20 @@ impl<'a> System<'a> for OurPlayerSystem {
               break;
             }
           }
-          if let Some(bell) = jumped_from {
-            jumpable_bell_markers.remove(bell);
-            draw_images.get_mut(bell).unwrap().alpha = 0.3f32;
-            let pos = trs.get(bell).unwrap().position();
+          if let Some(ent) = jumped_from {
+            jumpable_bell_markers.remove(ent);
+            draw_images.get_mut(ent).unwrap().alpha = 0.3f32;
+            let pos = trs.get(ent).unwrap().position();
             collision_star::build_stars((&ents, &mut colstars, &mut draw_images, &mut trs), pos);
             let mut dn = DrawNumbersComponent::new(1.0f32, Align::Center);
-            dn.set_number(our_p.next_bell_score);
-            p.score += our_p.next_bell_score;
-            our_p.next_bell_score += 10;
+            if bells.contains(ent) {
+              dn.set_number(our_p.next_bell_score);
+              p.score += our_p.next_bell_score;
+              our_p.next_bell_score += 10;
+            } else {
+              dn.set_number(p.score);
+              p.score *= 2;
+            }
             let sg = ents.create();
             fade_outs.insert(sg, FadeOut::new(0.6f32)).unwrap();
             dns.insert(sg, dn).unwrap();

@@ -24,10 +24,14 @@ pub fn register_common_components(w: &mut World) {
   w.register::<components::physics::Velocity>();
   w.register::<components::physics::Gravity>();
   w.register::<components::bell::BellComponent>();
+  w.register::<components::bird::Bird>();
 }
 
 pub fn register_common_systems(dispatch: &mut DispatcherBuilder) {
   dispatch.add(systems::physics::GravitySystem, "gravity_system", &[]);
-  dispatch.add( systems::physics::VelocitySystem, "velocity_system", &["gravity_system"],);
-  dispatch.add(systems::create_bell::CreateBellSystem::default(), "create_bell_system", &[]);
+  dispatch.add(systems::physics::VelocitySystem, "velocity_system", &["gravity_system"],);
+  dispatch.add(systems::max_player_y::MaxPlayerYSystem, "max_player_y_system", &[]);
+  dispatch.add(systems::create_bell::CreateBellSystem::default(), "create_bell_system", &["max_player_y_system"]);
+  dispatch.add(systems::create_bird::CreateBirdSystem::default(), "create_bird_system", &["max_player_y_system"]);
+  dispatch.add(systems::bird::BirdSystem, "bird_system", &[]);
 }

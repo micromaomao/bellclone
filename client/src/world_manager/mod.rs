@@ -18,18 +18,7 @@ use crate::{
   global,
   render::{view::view_matrix, ViewportSize},
 };
-use game_core::{
-  dec::parse_entity_id,
-  ec::{
-    components::{
-      bell::BellComponent, physics::Velocity, player::PlayerComponent,
-      transform::WorldSpaceTransform, EntityId,
-    },
-    systems::create_bell::CreateBellSystemControl,
-    DeltaTime,
-  },
-  STAGE_MIN_HEIGHT, STAGE_WIDTH,
-};
+use game_core::{STAGE_MIN_HEIGHT, STAGE_WIDTH, dec::{parse_entity_id, parse_mat4}, ec::{DeltaTime, components::{EntityId, bell::BellComponent, bird::{Bird, Direction}, physics::Velocity, player::PlayerComponent, transform::WorldSpaceTransform}, systems::{create_bell::CreateBellSystemControl, create_bird::CreateBirdSystemController}}};
 use glam::f32::*;
 use protocol::{
   clientmsg_generated::ClientMessage,
@@ -83,6 +72,7 @@ impl WorldManager {
 
   pub fn init_offline(&mut self, ec: &mut EcCtx) {
     ec.world.write_resource::<CreateBellSystemControl>().enabled = true;
+    ec.world.write_resource::<CreateBirdSystemController>().enabled = true;
     self.init_common(ec);
     if self.me.is_none() {
       self.me = Some(create_our_player(ec));
@@ -249,7 +239,29 @@ impl WorldManager {
           ent.delete(e);
         }
         self.entityid_map.insert(id, our_player_ent.unwrap());
-      }
+      },
+      ServerMessageInner::Birds => {
+        let msg = msg.msg_as_birds().unwrap();
+        let w = &mut ec.world;
+        let ents = w.entities();
+        let mut birdc = w.write_storage::<Bird>();
+        let mut tr = w.write_storage::<WorldSpaceTransform>();
+        let mut jumpc = w.write_storage::<OurJumpableBell>();
+        for b in msg.birds().unwrap() {
+          let ent = *self.entityid_map.entry(parse_entity_id(b.id().unwrap())).or_insert_with(|| ents.create());
+          if !birdc.contains(ent) {
+            jumpc.insert(ent, OurJumpableBell);
+          }
+          birdc.insert(ent, Bird {
+            direction: match b.dir_is_right() {
+              true => Direction::RIGHT,
+              false => Direction::LEFT
+            },
+            turning: b.turning()
+          });
+          tr.insert(ent, WorldSpaceTransform(parse_mat4(b.transform().unwrap())));
+        }
+      },
       _ => unreachable!(),
     }
   }

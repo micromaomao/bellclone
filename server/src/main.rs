@@ -12,15 +12,34 @@ use std::{
 use clap::Arg;
 use enc::{encode_bell, encode_player_delete};
 use futures::{FutureExt, SinkExt, StreamExt};
-use game_core::{dec::parse_score, ec::{DeltaTime, components::{
+use game_core::{
+  dec::parse_score,
+  ec::{
+    components::{
       bell::BellComponent,
+      bird::Bird,
       physics::Velocity,
       player::{build_player, PlayerComponent},
       transform::WorldSpaceTransform,
       EntityId,
-    }, register_common_components, register_common_systems, systems::create_bell::CreateBellSystemControl}, enc::encode_entity_id};
+    },
+    register_common_components, register_common_systems,
+    systems::{
+      create_bell::CreateBellSystemControl, create_bird::CreateBirdSystemController,
+      max_player_y::MaxPlayerY,
+    },
+    DeltaTime,
+  },
+  enc::encode_entity_id,
+};
 use glam::{f32::*, Vec3Swizzles};
-use protocol::{clientmsg_generated::{root_as_client_message, ClientMessage, ClientMessageInner}, flatbuffers::FlatBufferBuilder, servermsg_generated::{BellsBuilder, ServerMessageInner, YourIDIs, YourIDIsBuilder}};
+use protocol::{
+  clientmsg_generated::{root_as_client_message, ClientMessage, ClientMessageInner},
+  flatbuffers::FlatBufferBuilder,
+  servermsg_generated::{
+    BellsBuilder, BirdsBuilder, ServerMessageInner, YourIDIs, YourIDIsBuilder,
+  },
+};
 use specs::{Builder, Dispatcher, DispatcherBuilder, Entity, Join, World, WorldExt};
 use std::error::Error;
 use thread::sleep;
@@ -32,7 +51,7 @@ use tokio::{
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_tungstenite::tungstenite::Message;
 
-use crate::enc::to_message;
+use crate::enc::{encode_bird, to_message};
 
 mod ec;
 mod enc;
@@ -56,6 +75,8 @@ impl ServerContext {
     let mut ctl = CreateBellSystemControl::default();
     ctl.enabled = true;
     w.insert(ctl);
+    w.insert(CreateBirdSystemController { enabled: true });
+    w.insert(MaxPlayerY::default());
     let server_ctx = ServerContext {
       broadcast_server_message: broadcast::channel(100).0,
       ecworld: Mutex::new(w),
@@ -67,11 +88,7 @@ impl ServerContext {
       "player_limit_system",
       &[],
     );
-    dispatch.add(
-      ec::ServerBellsSystem,
-      "server_bells_system",
-      &[]
-    );
+    dispatch.add(ec::ServerBellsSystem, "server_bells_system", &[]);
     let mt_ctx = MainThreadContext {
       dispatch: dispatch.build(),
       last_update: Instant::now(),
@@ -114,7 +131,8 @@ impl ServerContext {
       }
     }
     {
-      let mut need_to_broadcast_bells = &mut w.write_resource::<CreateBellSystemControl>().last_round_gen;
+      let mut need_to_broadcast_bells =
+        &mut w.write_resource::<CreateBellSystemControl>().last_round_gen;
       if !need_to_broadcast_bells.is_empty() {
         let poses = w.read_storage::<WorldSpaceTransform>();
         let bells = w.read_storage::<BellComponent>();
@@ -124,7 +142,12 @@ impl ServerContext {
         for &e in need_to_broadcast_bells.iter() {
           if let Some(&BellComponent { size }) = bells.get(e) {
             if let Some(wt) = poses.get(e) {
-              let b = encode_bell(&mut fbb, bells.get(e).unwrap().size, &wt.position().xy(), &vel.get(e).unwrap().0);
+              let b = encode_bell(
+                &mut fbb,
+                bells.get(e).unwrap().size,
+                &wt.position().xy(),
+                &vel.get(e).unwrap().0,
+              );
               buf.push(b);
             }
           }
@@ -261,19 +284,23 @@ async fn accept_ws(
   }
 
   {
-    let mut w = server_ctx.borrow_world().await;
-    player_ent = build_player(&mut *w).build();
-    player_uuid = *w.read_storage::<EntityId>().get(player_ent).unwrap();
-    send_player_update(server_ctx, &mut fbb, get_current_player_state!(w));
-
+    {
+      let mut w = server_ctx.borrow_world().await;
+      player_ent = build_player(&mut *w).build();
+      player_uuid = *w.read_storage::<EntityId>().get(player_ent).unwrap();
+      send_player_update(server_ctx, &mut fbb, get_current_player_state!(w));
+    }
     fbb.reset();
-    let bells = w.read_storage::<BellComponent>();
-    let poses = w.read_storage::<WorldSpaceTransform>();
-    let vel = w.read_storage::<Velocity>();
     let mut buf = Vec::new();
-    for (b, wt, vel) in (&bells, &poses, &vel).join() {
-      let msg = encode_bell(&mut fbb, b.size, &wt.position().xy(), &vel.0);
-      buf.push(msg);
+    {
+      let mut w = server_ctx.borrow_world().await;
+      let bells = w.read_storage::<BellComponent>();
+      let poses = w.read_storage::<WorldSpaceTransform>();
+      let vel = w.read_storage::<Velocity>();
+      for (b, wt, vel) in (&bells, &poses, &vel).join() {
+        let msg = encode_bell(&mut fbb, b.size, &wt.position().xy(), &vel.0);
+        buf.push(msg);
+      }
     }
     let v = fbb.create_vector(&buf);
     let mut bells_msg = BellsBuilder::new(&mut fbb);
@@ -298,43 +325,71 @@ async fn accept_ws(
   ws.flush().await;
 
   let mut delay_fut = interval(Duration::from_millis(5));
+  let mut last_bird_message_time: Option<Instant> = None;
   let broadcast_sub = server_ctx.subscribe_broadcast();
   let mut broadcast_sub = BroadcastStream::new(broadcast_sub);
   let mut player_changed = false;
+
+
   loop {
     fbb.reset();
     futures::select! {
-      data = broadcast_sub.next().fuse() => {
-        if let Some(Ok(data)) = data {
-          ws.send(Message::Binary(data.to_vec())).await;
-        }
-      },
-      _ = delay_fut.tick().fuse() => {{
-        if player_changed {
-          let w = server_ctx.borrow_world().await;
-          send_player_update(server_ctx, &mut fbb, get_current_player_state!(w));
-          player_changed = false;
-        }
-      }},
-      data = ws.next().fuse() => {
-        match data {
-          Some(Ok(Message::Binary(data))) => {
-            match root_as_client_message(&data) {
-              Ok(msg) => {
-                if process_client_msg(server_ctx, msg, player_ent).await.is_ok() {
-                  player_changed = true;
+        data = broadcast_sub.next().fuse() => {
+          if let Some(Ok(data)) = data {
+            ws.send(Message::Binary(data.to_vec())).await;
+          }
+        },
+        _ = delay_fut.tick().fuse() => {{
+          if player_changed {
+            let w = server_ctx.borrow_world().await;
+            send_player_update(server_ctx, &mut fbb, get_current_player_state!(w));
+            player_changed = false;
+          }
+          if last_bird_message_time.is_none() || last_bird_message_time.unwrap().elapsed() > Duration::from_millis(5000) {
+            fbb.reset();
+            let mut buf = Vec::new();
+            {
+              let mut w = server_ctx.borrow_world().await;
+              let birdc = w.read_storage::<Bird>();
+              let trc = w.read_storage::<WorldSpaceTransform>();
+              let entid = w.read_storage::<EntityId>();
+              let player_y = trc.get(player_ent).unwrap().position().y;
+              for (bird, tr, &entid) in (&birdc, &trc, &entid).join() {
+                if tr.position().y > player_y && tr.position().y < player_y + 1000f32 {
+                  buf.push(encode_bird(&mut fbb, tr, bird, entid));
                 }
-              },
-              Err(_) => {}
+              }
             }
-          },
-          Some(Err(_)) | None => {
-            break;
-          },
-          _ => {}
+            let buf = fbb.create_vector(&buf);
+            let mut msg = BirdsBuilder::new(&mut fbb);
+            msg.add_birds(buf);
+            let msg = msg.finish();
+            let msg = to_message(&mut fbb, msg, ServerMessageInner::Birds);
+            fbb.finish(msg, None);
+            ws.send(Message::Binary(fbb.finished_data().to_vec())).await?;
+            fbb.reset();
+            last_bird_message_time = Some(Instant::now());
+          }
+        }},
+        data = ws.next().fuse() => {
+          match data {
+            Some(Ok(Message::Binary(data))) => {
+              match root_as_client_message(&data) {
+                Ok(msg) => {
+                  if process_client_msg(server_ctx, msg, player_ent).await.is_ok() {
+                    player_changed = true;
+                  }
+                },
+                Err(_) => {}
+              }
+            },
+            Some(Err(_)) | None => {
+              break;
+            },
+            _ => {}
+          }
         }
       }
-    }
     fbb.reset();
   }
   fbb.reset();

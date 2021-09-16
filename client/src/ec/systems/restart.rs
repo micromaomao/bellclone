@@ -1,7 +1,11 @@
-use game_core::ec::components::{bell::BellComponent, player::PlayerComponent};
+use game_core::ec::components::{bell::BellComponent, bird::Bird, player::PlayerComponent};
 use specs::{Entities, Entity, Join, ReadStorage, System, WriteStorage};
 
-use crate::ec::components::{DrawImage, bell::OurJumpableBell, player::{OurPlayer, OurPlayerState}};
+use crate::ec::components::{
+  bell::OurJumpableBell,
+  player::{OurPlayer, OurPlayerState},
+  DrawImage,
+};
 
 #[derive(Debug, Default)]
 pub struct RestartSystem;
@@ -11,17 +15,18 @@ impl<'a> System<'a> for RestartSystem {
     Entities<'a>,
     WriteStorage<'a, OurPlayer>,
     WriteStorage<'a, PlayerComponent>,
-    ReadStorage<'a, BellComponent>,
     WriteStorage<'a, OurJumpableBell>,
     WriteStorage<'a, DrawImage>,
+    ReadStorage<'a, BellComponent>,
+    ReadStorage<'a, Bird>,
   );
 
-  fn run(&mut self, (ents, mut ops, mut ps, bells, mut ojbs, mut dics): Self::SystemData) {
+  fn run(&mut self, (ents, mut ops, mut ps, mut jumpc, mut dics, bellc, birdc): Self::SystemData) {
     for (op, p) in (&mut ops, &mut ps).join() {
       if op.state == OurPlayerState::NotStarted {
-        for (ent, _, draw) in (&ents, &bells, &mut dics).join() {
-          if !ojbs.contains(ent) {
-            ojbs.insert(ent, OurJumpableBell);
+        for (ent, draw) in (&ents, &mut dics).join() {
+          if !jumpc.contains(ent) && (bellc.contains(ent) || birdc.contains(ent)) {
+            jumpc.insert(ent, OurJumpableBell);
             draw.alpha = 1f32;
           }
         }

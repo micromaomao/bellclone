@@ -3,7 +3,7 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
-use game_core::ec::{DeltaTime, register_common_components, register_common_systems, systems::create_bell::CreateBellSystemControl};
+use game_core::ec::{DeltaTime, register_common_components, register_common_systems, systems::{create_bell::CreateBellSystemControl, create_bird::CreateBirdSystemController, max_player_y::MaxPlayerY}};
 use golem::{ElementBuffer, GeometryMode, Surface, Texture, UniformValue, VertexBuffer};
 use specs::{Dispatcher, DispatcherBuilder};
 use specs::{World, WorldExt};
@@ -44,6 +44,8 @@ impl EcCtx {
     world.insert(PointerState::default());
     world.insert(BlurFlags::default());
     world.insert(CreateBellSystemControl::default());
+    world.insert(MaxPlayerY::default());
+    world.insert(CreateBirdSystemController::default());
     world.maintain();
     let glctx = &graphics.glctx;
     let mut buf = VertexBuffer::new(glctx).unwrap();
@@ -198,6 +200,11 @@ fn build_game_dispatch<'a, 'b>() -> Dispatcher<'a, 'b> {
     systems::restart::RestartSystem::default(),
     "restart_system",
     &[],
+  );
+  game_dispatch.add(
+    systems::bird::ClientBirdSystem,
+    "client_bird_system",
+    &["bird_system"],
   );
   game_dispatch.build()
 }

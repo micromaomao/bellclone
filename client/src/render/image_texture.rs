@@ -48,4 +48,4 @@ macro_rules! define_images {
   };
 }
 
-define_images!(crab, gopher, star, numbers);
+define_images!(crab, gopher, star, numbers, cargo);

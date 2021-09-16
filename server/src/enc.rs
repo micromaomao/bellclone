@@ -1,10 +1,5 @@
-use game_core::{
-  ec::components::{
-    physics::Velocity, player::PlayerComponent, transform::WorldSpaceTransform, EntityId,
-  },
-  enc::encode_entity_id,
-};
-use protocol::{flatbuffers::{FlatBufferBuilder, WIPOffset}, servermsg_generated::{Bell, BellBuilder, PlayerDeleteBuilder, PlayerUpdateBuilder, ServerMessage, ServerMessageBuilder, ServerMessageInner}};
+use game_core::{ec::components::{EntityId, physics::Velocity, player::PlayerComponent, transform::WorldSpaceTransform}, enc::{encode_entity_id, encode_mat4}};
+use protocol::{flatbuffers::{FlatBufferBuilder, WIPOffset}, servermsg_generated::{Bell, BellBuilder, Bird, BirdBuilder, PlayerDeleteBuilder, PlayerUpdateBuilder, ServerMessage, ServerMessageBuilder, ServerMessageInner}};
 
 pub fn encode_player_update<'a>(
   fbb: &mut FlatBufferBuilder<'a>,
@@ -54,5 +49,14 @@ pub fn encode_bell<'a>(fbb: &mut FlatBufferBuilder<'a>, size: f32, pos: &glam::V
   let mut b = BellBuilder::new(fbb);
   b.add_pos(&protocol::base_generated::Vec2::new(pos.x, pos.y));
   b.add_vel(&protocol::base_generated::Vec2::new(vel.x, vel.y));
+  b.finish()
+}
+
+pub fn encode_bird<'a>(fbb: &mut FlatBufferBuilder<'a>, tr: &WorldSpaceTransform, bird: &game_core::ec::components::bird::Bird, ent_id: game_core::ec::components::EntityId) -> WIPOffset<Bird<'a>> {
+  let mut b = BirdBuilder::new(fbb);
+  b.add_id(&encode_entity_id(ent_id));
+  b.add_transform(&encode_mat4(tr.0));
+  b.add_dir_is_right(bird.direction == game_core::ec::components::bird::Direction::RIGHT);
+  b.add_turning(bird.turning);
   b.finish()
 }

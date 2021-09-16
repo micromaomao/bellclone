@@ -7,6 +7,7 @@ pub mod bell;
 pub mod physics;
 pub mod player;
 pub mod transform;
+pub mod bird;
 
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct EntityId(pub Uuid);
