@@ -5,6 +5,7 @@ This project is a rust implementation of the Winterbells game by Ferry Halim. [(
 * Gopher: Renee French - CC-BY 3.0
 * Ferris the Rustacean:  Karen Rustad Tölva - CC0 (Public domain)
 * touch screen icon: Andrew Nielsen from the Noun Project - CC-BY 3.0
+* Bike, Bell Ding, Single, 01-01.wav: InspectorJ (freesound.org) - CC-BY 3.0
 
 ## TODO
 

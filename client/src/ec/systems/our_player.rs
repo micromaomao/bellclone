@@ -1,4 +1,10 @@
-use game_core::ec::{DeltaTime, components::{bell::BellComponent, bird::Bird, physics::Velocity, player::PlayerComponent, transform::WorldSpaceTransform}};
+use game_core::ec::{
+  components::{
+    bell::BellComponent, bird::Bird, physics::Velocity, player::PlayerComponent,
+    transform::WorldSpaceTransform,
+  },
+  DeltaTime,
+};
 use glam::f32::*;
 use specs::{Entities, Entity, Join, Read, ReadStorage, System, WriteStorage};
 
@@ -15,6 +21,12 @@ use crate::ec::{
 };
 
 use super::collision_star;
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen(js_namespace=window)]
+extern "C" {
+  fn play_hit_audio();
+}
 
 pub struct OurPlayerSystem;
 
@@ -61,7 +73,7 @@ impl<'a> System<'a> for OurPlayerSystem {
       mut draw_images,
       mut fade_outs,
       mut dns,
-      birdc
+      birdc,
     ): Self::SystemData,
   ) {
     for (p_entid, p, mut our_p, vel) in (&ents, &mut players, &mut our_players, &mut vels).join() {
@@ -101,7 +113,15 @@ impl<'a> System<'a> for OurPlayerSystem {
 
         if our_p.state != OurPlayerState::Falling {
           let mut jumped_from: Option<Entity> = None;
-          for (ent, bell, bird, tr, _) in (&ents, bells.maybe(), birdc.maybe(), &trs, &jumpable_bell_markers).join() {
+          for (ent, bell, bird, tr, _) in (
+            &ents,
+            bells.maybe(),
+            birdc.maybe(),
+            &trs,
+            &jumpable_bell_markers,
+          )
+            .join()
+          {
             let pos = tr.position();
             let size = bell.map(|x| x.size).unwrap_or(0.5f32);
             if (player_pos - pos).length_squared() < size * 0.5f32 {
@@ -121,6 +141,7 @@ impl<'a> System<'a> for OurPlayerSystem {
           }
           if let Some(ent) = jumped_from {
             jumpable_bell_markers.remove(ent);
+            play_hit_audio();
             draw_images.get_mut(ent).unwrap().alpha = 0.3f32;
             let pos = trs.get(ent).unwrap().position();
             collision_star::build_stars((&ents, &mut colstars, &mut draw_images, &mut trs), pos);
