@@ -6,5 +6,5 @@ if [ "$CLIENT_WS_URL" == "" ]; then
 fi
 rm -rf pkg target/wasm32-unknown-unknown/release
 ./build.sh
-tar -c pkg index.html bootstrap.js | gzip > ../client.tar.gz
+tar -c pkg index.html bootstrap.js chime | gzip > ../client.tar.gz
 cd ..
