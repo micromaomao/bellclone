@@ -171,6 +171,7 @@ fn register_client_components(w: &mut World) {
   w.register::<components::DrawImage>();
   w.register::<components::draw_numbers::DrawNumbersComponent>();
   w.register::<components::effects::FadeOut>();
+  w.register::<components::BackgroundMarker>();
 }
 
 fn build_game_dispatch<'a, 'b>() -> Dispatcher<'a, 'b> {

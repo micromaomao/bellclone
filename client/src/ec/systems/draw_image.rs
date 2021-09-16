@@ -4,10 +4,7 @@ use game_core::ec::components::transform::WorldSpaceTransform;
 use golem::{Context, ElementBuffer, UniformValue, VertexBuffer};
 use specs::{Join, Read, ReadStorage, System};
 
-use crate::{
-  ec::components::{player::OurPlayer, DrawImage},
-  render::DrawingCtx,
-};
+use crate::{ec::components::{BackgroundMarker, DrawImage, player::OurPlayer}, render::DrawingCtx};
 
 pub struct DrawImageSystem {
   buf: VertexBuffer,
@@ -38,9 +35,10 @@ impl<'a> System<'a> for DrawImageSystem {
     ReadStorage<'a, WorldSpaceTransform>,
     ReadStorage<'a, DrawImage>,
     ReadStorage<'a, OurPlayer>,
+    ReadStorage<'a, BackgroundMarker>,
   );
 
-  fn run(&mut self, (dctx, trs, imgs, ops): Self::SystemData) {
+  fn run(&mut self, (dctx, trs, imgs, ops, bgc): Self::SystemData) {
     let dctx = dctx.unwrap();
     let mut shaders = dctx.shaders.borrow_mut();
     let prog = &mut shaders.image;
@@ -69,7 +67,10 @@ impl<'a> System<'a> for DrawImageSystem {
       };
     }
     // so that we draw our player above anything else.
-    for (tr, img, _) in (&trs, &imgs, !&ops).join() {
+    for (tr, img, _, _) in (&trs, &imgs, !&ops, &bgc).join() {
+      d!(tr, img);
+    }
+    for (tr, img, _, _) in (&trs, &imgs, !&ops, !&bgc).join() {
       d!(tr, img);
     }
     for (tr, img, _) in (&trs, &imgs, &ops).join() {

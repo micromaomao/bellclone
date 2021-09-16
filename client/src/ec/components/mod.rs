@@ -1,5 +1,5 @@
 use glam::f32::*;
-use specs::{Component, VecStorage};
+use specs::{Component, NullStorage, VecStorage};
 
 use crate::render::image_texture::LoadedTexture;
 
@@ -18,4 +18,11 @@ pub struct DrawImage {
 
 impl Component for DrawImage {
   type Storage = VecStorage<Self>;
+}
+
+#[derive(Default, Clone, Copy)]
+pub struct BackgroundMarker;
+
+impl Component for BackgroundMarker {
+  type Storage = NullStorage<BackgroundMarker>;
 }
