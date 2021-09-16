@@ -221,6 +221,8 @@ export function client_init() {
     wasm.client_init();
 }
 
+function notDefined(what) { return () => { throw new Error(`${what} is not defined`); }; }
+
 function handleError(f, args) {
     try {
         return f.apply(this, args);
@@ -418,6 +420,7 @@ async function init(input) {
         var ret = getObject(arg0).clientY;
         return ret;
     };
+    imports.wbg.__wbg_playhitaudio_1b558593da83918e = typeof play_hit_audio == 'function' ? play_hit_audio : notDefined('play_hit_audio');
     imports.wbg.__wbg_document_40cc17d69aad887e = function(arg0) {
         var ret = getObject(arg0).document;
         return isLikeNone(ret) ? 0 : addHeapObject(ret);
@@ -957,11 +960,11 @@ async function init(input) {
     imports.wbg.__wbg_send_a2692a048a8e4a9b = function() { return handleError(function (arg0, arg1, arg2) {
         getObject(arg0).send(getArrayU8FromWasm0(arg1, arg2));
     }, arguments) };
-    imports.wbg.__wbindgen_closure_wrapper579 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper580 = function(arg0, arg1, arg2) {
         var ret = makeClosure(arg0, arg1, 32, __wbg_adapter_26);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper580 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper581 = function(arg0, arg1, arg2) {
         var ret = makeClosure(arg0, arg1, 29, __wbg_adapter_29);
         return addHeapObject(ret);
     };
