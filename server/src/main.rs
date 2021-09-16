@@ -115,27 +115,29 @@ impl ServerContext {
     }
     {
       let mut need_to_broadcast_bells = &mut w.write_resource::<CreateBellSystemControl>().last_round_gen;
-      let poses = w.read_storage::<WorldSpaceTransform>();
-      let bells = w.read_storage::<BellComponent>();
-      let vel = w.read_storage::<Velocity>();
-      let mut fbb = FlatBufferBuilder::new();
-      let mut buf = Vec::new();
-      for &e in need_to_broadcast_bells.iter() {
-        if let Some(&BellComponent { size }) = bells.get(e) {
-          if let Some(wt) = poses.get(e) {
-            let b = encode_bell(&mut fbb, bells.get(e).unwrap().size, &wt.position().xy(), &vel.get(e).unwrap().0);
-            buf.push(b);
+      if !need_to_broadcast_bells.is_empty() {
+        let poses = w.read_storage::<WorldSpaceTransform>();
+        let bells = w.read_storage::<BellComponent>();
+        let vel = w.read_storage::<Velocity>();
+        let mut fbb = FlatBufferBuilder::new();
+        let mut buf = Vec::new();
+        for &e in need_to_broadcast_bells.iter() {
+          if let Some(&BellComponent { size }) = bells.get(e) {
+            if let Some(wt) = poses.get(e) {
+              let b = encode_bell(&mut fbb, bells.get(e).unwrap().size, &wt.position().xy(), &vel.get(e).unwrap().0);
+              buf.push(b);
+            }
           }
         }
+        let v = fbb.create_vector(&buf);
+        let mut bells_msg = BellsBuilder::new(&mut fbb);
+        bells_msg.add_bells(v);
+        let bells_msg = bells_msg.finish();
+        let msg = to_message(&mut fbb, bells_msg, ServerMessageInner::Bells);
+        fbb.finish(msg, None);
+        self.broadcast(fbb.finished_data().to_vec());
+        need_to_broadcast_bells.clear();
       }
-      let v = fbb.create_vector(&buf);
-      let mut bells_msg = BellsBuilder::new(&mut fbb);
-      bells_msg.add_bells(v);
-      let bells_msg = bells_msg.finish();
-      let msg = to_message(&mut fbb, bells_msg, ServerMessageInner::Bells);
-      fbb.finish(msg, None);
-      self.broadcast(fbb.finished_data().to_vec());
-      need_to_broadcast_bells.clear();
     }
     w.maintain();
   }
