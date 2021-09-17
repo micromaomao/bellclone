@@ -1,3 +1,5 @@
+<span style="font-size: 40px; font-weight: bold;">[Play now](https://bellclone.maowtm.org/)</span>
+
 [![A recording of the gameplay](./readme.gif)](https://www.youtube.com/watch?v=aX0cvbsvIuw)
 
 This project is a rust implementation of the Winterbells game by Ferry Halim. [(play the original in 3rd party archive)](http://www.freewebarcade.com/html5/flash/winterbells.html)
