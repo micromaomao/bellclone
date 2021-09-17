@@ -1,4 +1,4 @@
-<span style="font-size: 40px; font-weight: bold;">[Play now](https://bellclone.maowtm.org/)</span>
+<h1><a href="https://bellclone.maowtm.org/">Play Now</a></h1>
 
 [![A recording of the gameplay](./readme.gif)](https://www.youtube.com/watch?v=aX0cvbsvIuw)
 
