@@ -34,6 +34,9 @@ impl<'a> System<'a> for BackgroundStarSystem {
       return;
     }
     let dwctx = dwctx.unwrap();
+    if starc.is_empty() {
+      self.generated_regions.clear();
+    }
     let viewport = &dwctx.viewport;
     let mut x = viewport.bl.x.floor();
     let mut y = viewport.bl.y.floor();
