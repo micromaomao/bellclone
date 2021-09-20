@@ -1,25 +1,12 @@
 name: CI
 on: [push, pull_request]
 jobs:
-  server-test:
+  docker-build-and-push:
     runs-on: ubuntu-latest
-    container:
-      image: rust:latest
     steps:
-      - name: Install flatc
-        run: >
-          apt-get update -y && apt-get install -y curl unzip &&
-          mkdir /tmp/flatc &&
-          cd /tmp/flatc &&
-          curl -sL 'https://github.com/google/flatbuffers/releases/download/v2.0.0/Linux.flatc.binary.clang++-9.zip' -o flatc.zip &&
-          unzip flatc.zip &&
-          cp flatc /usr/bin &&
-          chmod a+rx /usr/bin/flatc
       - uses: actions/checkout@v2
-      - run: >
-          cd core && cargo test && cd ..
-      - run: >
-          cd server && cargo test && cd ..
+      - run: docker build . -t ghcr.io/micromaomao/bellclone-ws:latest
+      - run: docker push ghcr.io/micromaomao/bellclone-ws:latest
   build-client:
     runs-on: ubuntu-latest
     container:

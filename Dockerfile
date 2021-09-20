@@ -7,7 +7,9 @@ RUN apt-get update && apt-get install curl unzip && \
     chmod +x /usr/bin/flatc
 WORKDIR /usr/src/app
 COPY . .
-RUN cd server && cargo build --release
+RUN cd server && cargo build --release && cd ..
+RUN cd core && cargo test && cd ..
+RUN cd server && cargo test && cd ..
 
 FROM debian:latest
 COPY --from=build --chown=0:0 /usr/src/app/server/target/release/server /server
