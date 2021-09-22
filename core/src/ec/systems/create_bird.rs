@@ -46,7 +46,7 @@ impl<'a> System<'a> for CreateBirdSystem {
       return;
     }
     let max_player_y = max_player_y.unwrap();
-    if max_player_y + STAGE_MIN_HEIGHT < self.next_y {
+    if max_player_y + STAGE_MIN_HEIGHT + 20f32 < self.next_y {
       return;
     }
     let mut rng = thread_rng();
