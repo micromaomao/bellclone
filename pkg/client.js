@@ -412,6 +412,7 @@ async function init(input) {
         var ret = getObject(arg0).clientY;
         return ret;
     };
+    imports.wbg.__wbg_playhitaudio_1b558593da83918e = typeof play_hit_audio == 'function' ? play_hit_audio : notDefined('play_hit_audio');
     imports.wbg.__wbg_createFramebuffer_ea3800404236687e = function(arg0) {
         var ret = getObject(arg0).createFramebuffer();
         return isLikeNone(ret) ? 0 : addHeapObject(ret);
@@ -420,7 +421,6 @@ async function init(input) {
         var ret = getObject(arg0).createFramebuffer();
         return isLikeNone(ret) ? 0 : addHeapObject(ret);
     };
-    imports.wbg.__wbg_playhitaudio_1b558593da83918e = typeof play_hit_audio == 'function' ? play_hit_audio : notDefined('play_hit_audio');
     imports.wbg.__wbg_document_40cc17d69aad887e = function(arg0) {
         var ret = getObject(arg0).document;
         return isLikeNone(ret) ? 0 : addHeapObject(ret);
