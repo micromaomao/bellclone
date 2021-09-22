@@ -87,13 +87,18 @@ fn handle_resize() {
   let window = web_sys::window().unwrap();
   let width = window.inner_width().unwrap().as_f64().unwrap();
   let height = window.inner_height().unwrap().as_f64().unwrap();
-  let real_width = width * window.device_pixel_ratio();
-  let real_height = height * window.device_pixel_ratio();
+  let mut canvas_width = width * window.device_pixel_ratio();
+  let mut canvas_height = height * window.device_pixel_ratio();
+  // Limiting render size
+  // Unless we do this, some gl calls panics with "The texture width was bigger than the maximum size" on large screen.
+  const MAX_RENDER_DIMENSION: f64 = 2500f64;
+  canvas_width = canvas_width.min(MAX_RENDER_DIMENSION);
+  canvas_height = canvas_height.min(MAX_RENDER_DIMENSION);
   gr.resize(ViewportSize {
     width: width as u32,
     height: height as u32,
-    real_width: real_width as u32,
-    real_height: real_height as u32,
+    canvas_width: canvas_width as u32,
+    canvas_height: canvas_height as u32,
   });
   let mut ec = global::get_ref().ec.borrow_mut();
   ec.resize(gr);

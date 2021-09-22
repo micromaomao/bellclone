@@ -97,13 +97,13 @@ impl EcCtx {
 
   pub fn resize(&mut self, gctx: &GraphicsCtx) {
     let ViewportSize {
-      real_width,
-      real_height,
+      canvas_width,
+      canvas_height,
       ..
     } = *gctx.viewport_size.borrow();
     self.render_surface.bind();
     let mut tex = self.render_surface.take_texture().unwrap();
-    tex.set_image(None, real_width, real_height, golem::ColorFormat::RGB);
+    tex.set_image(None, canvas_width, canvas_height, golem::ColorFormat::RGB);
     self.render_surface.put_texture(tex);
     Surface::unbind(&gctx.glctx);
   }
@@ -111,12 +111,12 @@ impl EcCtx {
   pub fn render(&mut self, dctx: DrawingCtx) {
     let glctx = dctx.glctx;
     let ViewportSize {
-      real_width,
-      real_height,
+      canvas_width,
+      canvas_height,
       ..
     } = dctx.viewport.size;
     self.render_surface.bind();
-    glctx.set_viewport(0, 0, real_width, real_height);
+    glctx.set_viewport(0, 0, canvas_width, canvas_height);
     glctx.set_clear_color(
       (51f32 / 255f32).powf(2.2f32),
       0f32,

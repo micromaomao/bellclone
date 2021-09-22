@@ -1,6 +1,6 @@
 use std::{collections::HashSet, f32::consts::PI};
 
-use game_core::ec::{DeltaTime, components::transform::WorldSpaceTransform};
+use game_core::{STAGE_MAX_X, STAGE_MIN_HEIGHT, STAGE_MIN_X, ec::{DeltaTime, components::transform::WorldSpaceTransform}};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use rand::Rng;
 use specs::{Entities, Join, Read, System, WriteStorage};
@@ -51,7 +51,8 @@ impl<'a> System<'a> for BackgroundStarSystem {
       } else {
         x += 1f32;
       }
-      if y > viewport.tr.y {
+      // prevent too many stars on a high screen.
+      if y > viewport.tr.y || y > viewport.bl.y + STAGE_MIN_HEIGHT + 5f32 {
         break;
       }
       let pair = (x.round() as i64, y.round() as i64);
@@ -106,6 +107,12 @@ fn gen_region<'a>(
   x: f32,
   y: f32,
 ) {
+  // prevent too much stars on a wide screen.
+  const STARS_MAX_EXTEND: f32 = 4f32;
+  if x + 1f32 < STAGE_MIN_X - STARS_MAX_EXTEND || x > STAGE_MAX_X + STARS_MAX_EXTEND {
+    return;
+  }
+
   let mut rng = rand::thread_rng();
   const NB: i32 = 3;
   for _ in 0..NB {
